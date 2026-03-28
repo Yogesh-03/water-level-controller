@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "922411501237",
+    "firebase_url": "https://water-level-controller-53869-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "water-level-controller-53869",
+    "storage_bucket": "water-level-controller-53869.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:922411501237:android:57f99f2afb48746dd3a0fc",
+        "android_client_info": {
+          "package_name": "com.example.waterlevelcontroller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALPkMvPLhBTCWB1agH-wYCzPl9k3J4yWo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
