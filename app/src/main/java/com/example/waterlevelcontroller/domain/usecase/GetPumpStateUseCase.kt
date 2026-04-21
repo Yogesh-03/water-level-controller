@@ -3,9 +3,8 @@ package com.example.waterlevelcontroller.domain.usecase
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
 import javax.inject.Inject
 
-class SetPumpUseCase  @Inject constructor(
+class GetPumpStateUseCase @Inject constructor(
     private val repository: WaterRepository
 ) {
-//    suspend operator fun invoke(state: String) =
-//        repository.setPump(state)
+    //operator fun invoke() = repository.observePump()
 }

@@ -1,4 +1,34 @@
 package com.example.waterlevelcontroller.di
 
-class AppModulegi {
+import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
+import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
+import com.example.waterlevelcontroller.domain.repository.WaterRepository
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideDatabase(): DatabaseReference =
+        FirebaseDatabase.getInstance().reference
+
+    @Provides
+    @Singleton
+    fun provideFirebaseDataSource(
+        db: DatabaseReference
+    ) = FirebaseDataSource(db)
+
+    @Provides
+    @Singleton
+    fun provideRepository(
+        firebase: FirebaseDataSource
+    ): WaterRepository = WaterRepositoryImpl(firebase)
 }
