@@ -7,9 +7,9 @@ import kotlinx.coroutines.flow.Flow
 
 interface WaterRepository {
 
-    suspend fun updatePumpControl(data: PumpControlDto): Resource<Unit>
+    suspend fun updatePumpControl(data: PumpControl): Resource<Unit>
 
-    fun observePumpControl(): Flow<Resource<PumpControl>>
+     fun observePumpControl(): Flow<Resource<PumpControl>>
 
-    fun observeWaterLevels(): Flow<Resource<Sensor>>
+     fun observeWaterLevels(): Flow<Resource<Sensor>>
 }

@@ -21,3 +21,12 @@ fun SensorDto.toSensors(): Sensor {
         undergroundLow = undergroundLow ?: false
     )
 }
+
+fun PumpControl.toPumpControlDto(): PumpControlDto {
+    return PumpControlDto (
+        mode = mode,
+        pumpState = pumpState,
+        manualPump = manualPump
+    )
+}
+

@@ -369,16 +369,6 @@ fun TimeRangeDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // ✅ Better header with icon
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFE8F5E9)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("⏰", fontSize = 22.sp)
-                }
 
                 Spacer(Modifier.height(12.dp))
 
@@ -476,7 +466,6 @@ fun TimeRangeDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("🪣", fontSize = 24.sp)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
                                         "Until\nfull",
@@ -507,10 +496,21 @@ fun TimeRangeDialog(
                         )
                         .clickable { onUntilFullChange(!untilFull) }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    // 1. The Checkbox at the start
+                    Checkbox(
+                        checked = untilFull,
+                        onCheckedChange = null, // Set to null because the Row's clickable handles it
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Color(0xFFE65100), // Matches your OrangeBg theme
+                            uncheckedColor = Color(0xFF8E8E93)
+                        ),
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+
+                    // 2. The Text Content
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "Run until tank is full",
                             fontSize = 14.sp,
@@ -518,15 +518,12 @@ fun TimeRangeDialog(
                             color = Color(0xFF1C1C1E)
                         )
                         Text(
-                            "Ignores end time, stops when high sensor triggers",
+                            text = "Ignores end time, stops when high sensor triggers",
                             fontSize = 11.sp,
-                            color = Color(0xFF8E8E93)
+                            color = Color(0xFF8E8E93),
+                            lineHeight = 14.sp
                         )
                     }
-                    IOSToggle(
-                        isOn = untilFull,
-                        onToggle = { onUntilFullChange(!untilFull) }
-                    )
                 }
 
                 Spacer(Modifier.height(20.dp))

@@ -68,7 +68,7 @@ fun DashboardScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                TopBar("Water Controller")
+                TopBar("Pump Controller")
                 Spacer(Modifier.height(16.dp))
 
                 when (waterLevelState) {
@@ -125,10 +125,19 @@ fun DashboardScreen(
                         PumpCard(
                             pumpState = p?.pumpState,
                             manualPump = p?.manualPump,
-                            onToggle = { }
+                            onToggle = {
+                                // Use the helper we built in the ViewModel
+                                viewModel.togglePump(!(p?.pumpState ?: false))
+//                                val manualPumpMode = if(p?.mode == "auto") "on" else "off"
+//                                viewModel.updateManualPump(manualPumpMode)
+                            }
                         )
                         Spacer(Modifier.height(12.dp))
-                        ModeCard(mode = p?.mode)
+                        ModeCard(mode = p?.mode,
+                            onSwitchMode = {
+                                val nextMode = if (p?.mode == "auto") "manual" else "auto"
+                                viewModel.updateMode(nextMode)
+                            })
                     }
                 }
 
@@ -400,9 +409,10 @@ fun StatBox(label: String, value: String, valueColor: Color, modifier: Modifier 
 
 // ─── Mode Card ────────────────────────────────────────────────
 @Composable
-fun ModeCard(mode: String?) {
+fun ModeCard(mode: String?, onSwitchMode: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .clickable { onSwitchMode() }, // Make the whole card clickable
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         border = BorderStroke(0.5.dp, CardBorder),

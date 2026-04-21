@@ -15,22 +15,23 @@ class FirebaseDataSource @Inject constructor(
     private val db: DatabaseReference
 ) {
 
-    suspend fun updatePumpControl(
-        data: PumpControlDto
-    ) {
-        val updates = mutableMapOf<String, Any>()
+    suspend fun updatePumpControl(data: PumpControlDto) {
+        val updates = mapOf(
+            "mode" to (data.mode ?: "Auto"),
+            "pumpState" to (data.pumpState ?: false),
+            "manualPump" to (data.manualPump ?: "Off")
+        )
 
-        data.mode?.let { updates["mode"] = it }
-        data.pumpState?.let { updates["pumpState"] = it }
-        data.manualPump?.let { updates["manualPump"] = it }
-
-        if (updates.isNotEmpty()) {
+        try {
             db.updateChildren(updates).await()
+        } catch (e: Exception) {
+            Log.e("FirebaseDataSource", "Update failed", e)
+            throw e
         }
     }
 
 
-     fun observeWaterLevels(): Flow<SensorDto> = callbackFlow {
+    fun observeWaterLevels(): Flow<SensorDto> = callbackFlow {
 
         val ref = db
 
@@ -38,10 +39,14 @@ class FirebaseDataSource @Inject constructor(
             override fun onDataChange(snapshot: DataSnapshot) {
 
                 val dto = SensorDto(
-                    overheadLow = snapshot.child(FirebasePaths.OH_LOW).getValue(Boolean::class.java),
-                    overheadHigh = snapshot.child(FirebasePaths.OH_HIGH).getValue(Boolean::class.java),
-                    undergroundLow = snapshot.child(FirebasePaths.UG_LOW).getValue(Boolean::class.java),
-                    undergroundHigh = snapshot.child(FirebasePaths.UG_HIGH).getValue(Boolean::class.java)
+                    overheadLow = snapshot.child(FirebasePaths.OH_LOW)
+                        .getValue(Boolean::class.java),
+                    overheadHigh = snapshot.child(FirebasePaths.OH_HIGH)
+                        .getValue(Boolean::class.java),
+                    undergroundLow = snapshot.child(FirebasePaths.UG_LOW)
+                        .getValue(Boolean::class.java),
+                    undergroundHigh = snapshot.child(FirebasePaths.UG_HIGH)
+                        .getValue(Boolean::class.java)
                 )
 
                 trySend(dto)
@@ -56,7 +61,7 @@ class FirebaseDataSource @Inject constructor(
         awaitClose { ref.removeEventListener(listener) }
     }
 
-     fun observePumpControl(): Flow<PumpControlDto> = callbackFlow {
+    fun observePumpControl(): Flow<PumpControlDto> = callbackFlow {
 
         val ref = db
 
@@ -64,9 +69,11 @@ class FirebaseDataSource @Inject constructor(
             override fun onDataChange(snapshot: DataSnapshot) {
 
                 val dto = PumpControlDto(
-                    pumpState = snapshot.child(FirebasePaths.PUMP_STATE).getValue(Boolean::class.java),
+                    pumpState = snapshot.child(FirebasePaths.PUMP_STATE)
+                        .getValue(Boolean::class.java),
                     mode = snapshot.child(FirebasePaths.MODE).getValue(String::class.java),
-                    manualPump = snapshot.child(FirebasePaths.MANUAL_PUMP).getValue(String::class.java)
+                    manualPump = snapshot.child(FirebasePaths.MANUAL_PUMP)
+                        .getValue(String::class.java)
                 )
 
                 trySend(dto)

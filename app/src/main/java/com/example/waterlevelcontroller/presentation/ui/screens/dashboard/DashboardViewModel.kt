@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,43 +20,84 @@ class DashboardViewModel @Inject constructor(
     private val repository: WaterRepository
 ) : ViewModel() {
 
+    // Real-time state of the Pump (Mode, State, Manual overrides)
     private val _pumpControlState = MutableStateFlow<Resource<PumpControl>>(Resource.Loading())
     val pumpControlState: StateFlow<Resource<PumpControl>> = _pumpControlState.asStateFlow()
 
+    // Real-time state of the Tank Sensors (Low/High levels)
     private val _waterLevelState = MutableStateFlow<Resource<Sensor>>(Resource.Loading())
     val waterLevelState: StateFlow<Resource<Sensor>> = _waterLevelState.asStateFlow()
 
+    // Tracks if an update is currently pending (to disable buttons or show a small loader)
+    private val _isUpdating = MutableStateFlow(false)
+    val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
+
     init {
-        observePumpControlState()
-        observeWaterLevelState()
+        observeData()
     }
 
-    private fun observePumpControlState() {
+    /**
+     * Sets up real-time listeners to Firebase.
+     * Using collectLatest ensures we don't process stale data if updates are rapid.
+     */
+    private fun observeData() {
         viewModelScope.launch {
-            repository.observePumpControl().collect {
-                _pumpControlState.value = it
+            repository.observePumpControl().collectLatest { resource ->
+                _pumpControlState.value = resource
+            }
+        }
+
+        viewModelScope.launch {
+            repository.observeWaterLevels().collectLatest { resource ->
+                _waterLevelState.value = resource
             }
         }
     }
 
-    private fun observeWaterLevelState() {
-        viewModelScope.launch {
-            repository.observeWaterLevels().collect {
-                _waterLevelState.value = it
+    /**
+     * Sends new data to the Repository.
+     * We don't update local state manually; we let the Firebase listener handle it.
+     */
+    fun updatePumpControl(data: PumpControl) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isUpdating.value = true
+            val result = repository.updatePumpControl(data)
+
+            // If there's an error, you might want to trigger a UI event (like a Snackbar)
+            if (result is Resource.Error) {
+                // Log or handle error
             }
+
+            _isUpdating.value = false
         }
     }
 
-//    fun togglePump(current: String?) {
-//        viewModelScope.launch {
-//            val newState = if (current == "on") "off" else "on"
-//            repository.setPump(newState)
-//        }
-//    }
+    /**
+     * Helper to toggle pump state without needing the UI to construct the full object.
+     */
+    fun togglePump(isOn: Boolean) {
+        val currentData = (pumpControlState.value as? Resource.Success)?.data
+        currentData?.let {
+            updatePumpControl(it.copy(pumpState = isOn))
+        }
+    }
 
-//    fun togglePump(current: Boolean) {
-//        viewModelScope.launch {
-//            repository.setPump(if (current) "off" else "on")
-//        }
-//    }
+    /**
+     * Helper to change the operation mode (e.g., "Auto", "Manual")
+     */
+    fun updateMode(mode: String) {
+        val currentData = (pumpControlState.value as? Resource.Success)?.data
+        currentData?.let {
+            updatePumpControl(it.copy(mode = mode))
+
+        }
+    }
+
+    fun updateManualPump(manualPump: String){
+        val currentData = (pumpControlState.value as? Resource.Success)?.data
+        currentData?.let {
+            updatePumpControl(it.copy(manualPump = manualPump))
+        }
+
+    }
 }

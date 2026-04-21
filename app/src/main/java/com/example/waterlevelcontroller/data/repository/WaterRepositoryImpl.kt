@@ -2,6 +2,7 @@ package com.example.waterlevelcontroller.data.repository
 
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.data.mapper.toPumpControl
+import com.example.waterlevelcontroller.data.mapper.toPumpControlDto
 import com.example.waterlevelcontroller.data.mapper.toSensors
 import com.example.waterlevelcontroller.data.model.dto.PumpControlDto
 import com.example.waterlevelcontroller.domain.model.Sensor
@@ -18,9 +19,9 @@ class WaterRepositoryImpl @Inject constructor(
 ) : WaterRepository {
 
 
-    override suspend fun updatePumpControl(data: PumpControlDto): Resource<Unit> {
+    override suspend fun updatePumpControl(data: PumpControl): Resource<Unit> {
         return try {
-            firebase.updatePumpControl(data)
+            firebase.updatePumpControl(data.toPumpControlDto())
             Resource.Success(Unit)
         } catch (e : Exception){
             Resource.Error(e.message ?: "Error")
