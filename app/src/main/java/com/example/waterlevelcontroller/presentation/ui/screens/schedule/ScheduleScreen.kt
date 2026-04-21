@@ -1,9 +1,8 @@
 package com.example.waterlevelcontroller.presentation.ui.screens.schedule
 
-import android.R
-import android.app.TimePickerDialog
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -12,33 +11,31 @@ import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.waterlevelcontroller.presentation.ui.components.common.TopBar
-import com.example.waterlevelcontroller.presentation.ui.theme.CardBg
-import com.example.waterlevelcontroller.presentation.ui.theme.ScreenBg
-import com.example.waterlevelcontroller.presentation.ui.theme.ToggleGreen
-import java.util.Calendar
+import com.example.waterlevelcontroller.presentation.ui.theme.*
 
 // -------------------- DATA MODEL --------------------
 
 data class ScheduleUiModel(
+    val id: Long = System.currentTimeMillis(), // Added ID to uniquely identify for deletion
     val title: String,
     val startTime: String,
     val endTime: String,
@@ -47,27 +44,27 @@ data class ScheduleUiModel(
     val duration: String
 )
 
+// -------------------- MAIN SCREEN --------------------
 
 @Composable
 fun ScheduleScreen() {
-
     val schedules = remember {
         mutableStateListOf(
             ScheduleUiModel(
-                "Morning pump",
-                "06:00",
-                "07:00",
-                listOf("Mo", "Tu", "We", "Th", "Fr"),
-                true,
-                "1hr"
+                title = "Morning pump",
+                startTime = "06:00",
+                endTime = "07:00",
+                days = listOf("Mo", "Tu", "We", "Th", "Fr"),
+                isEnabled = true,
+                duration = "1hr"
             ),
             ScheduleUiModel(
-                "Evening pump",
-                "18:00",
-                "18:30",
-                listOf("Sa", "Su"),
-                false,
-                "30 min"
+                title = "Evening pump",
+                startTime = "18:00",
+                endTime = "18:30",
+                days = listOf("Sa", "Su"),
+                isEnabled = false,
+                duration = "30 min"
             )
         )
     }
@@ -82,92 +79,90 @@ fun ScheduleScreen() {
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // --- FIXED SECTION ---
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-
-
                 TopBar("Pump Scheduler")
-
                 Spacer(modifier = Modifier.height(16.dp))
-
-                // Next Schedule Card
                 NextScheduleCard()
+                Spacer(modifier = Modifier.height(24.dp))
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "ACTIVE SCHEDULES",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                schedules.forEachIndexed { index, schedule ->
-                    ScheduleCard(
-                        schedule = schedule,
-                        onToggle = {
-
-                        }
+                // HEADER ROW WITH ADD ICON
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "ACTIVE SCHEDULES",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    IconButton(
+                        onClick = {
+                            schedules.add(
+                                ScheduleUiModel(
+                                    title = "New Schedule",
+                                    startTime = "00:00",
+                                    endTime = "01:00",
+                                    days = emptyList(),
+                                    isEnabled = true,
+                                    duration = "1hr"
+                                )
+                            )
+                        },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Schedule",
+                            tint = ActiveBlue
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
-        }
 
-    }
-}
-
-// -------------------- NEXT CARD --------------------
-
-@Composable
-fun NextScheduleCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            Box(
+            // --- SCROLLABLE SECTION ---
+            LazyColumn(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(Color(0xFFE8F5E9), CircleShape),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("⏰")
+                items(schedules.size) { index ->
+                    val schedule = schedules[index]
+                    key(schedule.id) {
+                        ScheduleCard(
+                            schedule = schedule,
+                            onToggle = {
+                                schedules[index] = schedule.copy(isEnabled = !schedule.isEnabled)
+                            },
+                            onDelete = {
+                                schedules.removeAt(index)
+                            }
+                        )
+                    }
+                }
+                item { Spacer(modifier = Modifier.height(30.dp)) }
             }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Next schedule", color = Color.Gray)
-                Text("Morning pump", fontWeight = FontWeight.Bold)
-            }
-
-            Text(
-                text = "2h 14m",
-                color = Color(0xFF2E7D32),
-                fontWeight = FontWeight.Bold
-            )
         }
     }
 }
 
-// -------------------- SCHEDULE CARD --------------------
+// -------------------- COMPONENTS --------------------
 
 @Composable
 fun ScheduleCard(
     schedule: ScheduleUiModel,
-    onToggle: () -> Unit
+    onToggle: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    val ison = true
     var showDialog by remember { mutableStateOf(false) }
     var startTime by remember { mutableStateOf(schedule.startTime) }
     var endTime by remember { mutableStateOf(schedule.endTime) }
@@ -176,31 +171,25 @@ fun ScheduleCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = CardBg)
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        border = BorderStroke(0.5.dp, CardBorder)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             val selectedDays =
                 remember { mutableStateListOf<String>().apply { addAll(schedule.days) } }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(schedule.title, color = Color.Gray)
-
+                    Text(schedule.title, color = TextSecondary, fontSize = 12.sp)
                     Text(
-                        "${schedule.startTime} → ${schedule.endTime}",
-                        modifier = Modifier.clickable {
-                            showDialog = true
-                        },
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = if (untilFull) "$startTime → Full" else "$startTime → $endTime",
+                        modifier = Modifier.clickable { showDialog = true },
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
                     )
                 }
-
-
-                IOSToggle(isOn = ison, onToggle = onToggle)
+                IOSToggle(isOn = schedule.isEnabled, onToggle = onToggle)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -208,56 +197,90 @@ fun ScheduleCard(
             DaysRow(
                 activeDays = selectedDays,
                 onDayClick = { day ->
-                    if (selectedDays.contains(day)) {
-                        selectedDays.remove(day)
-                    } else {
-                        selectedDays.add(day)
-                    }
+                    if (selectedDays.contains(day)) selectedDays.remove(day) else selectedDays.add(
+                        day
+                    )
                 }
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // DELETE ICON BELOW DAYS
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Duration: ${schedule.duration}",
+                    color = ActiveBlue,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
 
-            Text(
-                text = "Duration: ${schedule.duration}",
-                color = Color(0xFF1976D2),
-                fontSize = 13.sp
-            )
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color.Red.copy(alpha = 0.6f),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clickable { onDelete() }
+                )
+            }
         }
     }
 
     if (showDialog) {
-
         TimeRangeDialog(
             startTime = startTime,
             endTime = endTime,
             untilFull = untilFull,
-
             onStartTimeChange = { startTime = it },
             onEndTimeChange = { endTime = it },
             onUntilFullChange = { untilFull = it },
-
             onDismiss = { showDialog = false },
-
-            onSave = { start, end, isUntilFull ->
-                showDialog = false
-
-                // ✅ update your schedule here
-                // start = "06:00"
-                // end = null if untilFull
-            }
+            onSave = { _, _, _ -> showDialog = false }
         )
     }
 }
 
-// -------------------- DAYS ROW (WITH CANVAS) --------------------
+// -------------------- THE REST OF YOUR COMPONENTS (DayCircle, IOSToggle, etc.) --------------------
+// (Keep the rest of the code from the previous response for NextScheduleCard, DaysRow, DayCircle, IOSToggle, TimeRangeDialog, WheelTimeGroup, and VerticalWheelPicker)
+
+@Composable
+fun NextScheduleCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        border = BorderStroke(0.5.dp, CardBorder)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(GreenLight, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("⏰")
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Next schedule", color = TextSecondary, fontSize = 12.sp)
+                Text("Morning pump", fontWeight = FontWeight.Bold, color = TextPrimary)
+            }
+            Text(text = "2h 14m", color = GreenDark, fontWeight = FontWeight.Bold)
+        }
+    }
+}
 
 @Composable
 fun DaysRow(activeDays: List<String>, onDayClick: (String) -> Unit) {
-
     val allDays = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
-
-    Row {
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         allDays.forEach { day ->
             DayCircle(day, day in activeDays, onClick = { onDayClick(day) })
         }
@@ -266,56 +289,24 @@ fun DaysRow(activeDays: List<String>, onDayClick: (String) -> Unit) {
 
 @Composable
 fun DayCircle(text: String, isActive: Boolean, onClick: () -> Unit) {
-    val scale by animateFloatAsState(
-        targetValue = if (isActive) 1.1f else 1f
-    )
+    val scale by animateFloatAsState(targetValue = if (isActive) 1.1f else 1f)
     Box(
         modifier = Modifier
-            .padding(end = 6.dp)
             .size(36.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable(
                 indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            ) { onClick() },
+                interactionSource = remember { MutableInteractionSource() }) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        @Composable
-        fun DayCircle(text: String, isActive: Boolean) {
-
-            Box(
-                modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(36.dp),
-                contentAlignment = Alignment.Center
-            ) {
-
-                Canvas(modifier = Modifier.matchParentSize()) {
-                    drawCircle(
-                        color = if (isActive) Color(0xFF1976D2) else Color.LightGray
-                    )
-                }
-
-                Text(
-                    text = text,
-                    color = if (isActive) Color.White else Color.DarkGray,
-                    fontSize = 12.sp
-                )
-            }
-        }
         Canvas(modifier = Modifier.matchParentSize()) {
-            drawCircle(
-                color = if (isActive) Color(0xFF1976D2) else Color.LightGray
-            )
+            drawCircle(color = if (isActive) ActiveBlue else PillGray)
         }
-
         Text(
             text = text,
-            color = if (isActive) Color.White else Color.DarkGray,
-            fontSize = 12.sp
+            color = if (isActive) Color.White else TextSecondary,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium
         )
     }
 }
@@ -324,8 +315,7 @@ fun DayCircle(text: String, isActive: Boolean, onClick: () -> Unit) {
 fun IOSToggle(isOn: Boolean, onToggle: () -> Unit) {
     val thumbOffset by animateFloatAsState(
         targetValue = if (isOn) 1f else 0f,
-        animationSpec = tween(200),
-        label = "toggle"
+        animationSpec = tween(200)
     )
     Box(
         modifier = Modifier
@@ -345,7 +335,6 @@ fun IOSToggle(isOn: Boolean, onToggle: () -> Unit) {
         )
     }
 }
-
 
 @Composable
 fun TimeRangeDialog(
@@ -368,167 +357,50 @@ fun TimeRangeDialog(
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
-
-                Spacer(Modifier.height(12.dp))
-
                 Text(
                     "Set pump schedule",
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1C1C1E)
+                    color = TextPrimary
                 )
-
                 Text(
                     "Pump will run automatically at set times",
                     fontSize = 12.sp,
-                    color = Color(0xFF8E8E93),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center
                 )
-
                 Spacer(Modifier.height(24.dp))
 
-                // ✅ Better time section labels
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // ✅ Colored label pill
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFFE8F5E9))
-                                .padding(horizontal = 12.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                "Start",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF2E7D32)
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            WheelTimeGroup(
-                                label = "",
-                                time = startTime,
-                                onTimeChange = onStartTimeChange
-                            )
-                        }
-                    }
-
-                    // ✅ Arrow instead of "to"
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Spacer(Modifier.height(28.dp))
-                        Text(
-                            "→",
-                            color = Color(0xFF8E8E93),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        // ✅ Colored label pill
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    if (untilFull) Color(0xFFFFF3E0)
-                                    else Color(0xFFE3F2FD)
-                                )
-                                .padding(horizontal = 12.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                if (untilFull) "Auto" else "End",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (untilFull) Color(0xFFE65100) else Color(0xFF1565C0)
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        if (!untilFull) {
-                            WheelTimeGroup(
-                                label = "",
-                                time = endTime,
-                                onTimeChange = onEndTimeChange
-                            )
-                        } else {
-                            // ✅ Better "until full" placeholder
-                            Box(
-                                modifier = Modifier
-                                    .width(64.dp)
-                                    .height(132.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFFFF3E0)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        "Until\nfull",
-                                        fontSize = 12.sp,
-                                        color = Color(0xFFE65100),
-                                        fontWeight = FontWeight.Medium,
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
-
-                Spacer(Modifier.height(12.dp))
-
-                // ✅ Better "until full" toggle row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (untilFull) Color(0xFFFFF3E0) else Color(0xFFF9F9FB)
-                        )
-                        .clickable { onUntilFullChange(!untilFull) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // 1. The Checkbox at the start
-                    Checkbox(
-                        checked = untilFull,
-                        onCheckedChange = null, // Set to null because the Row's clickable handles it
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = Color(0xFFE65100), // Matches your OrangeBg theme
-                            uncheckedColor = Color(0xFF8E8E93)
-                        ),
-                        modifier = Modifier.padding(end = 8.dp)
+                    TimePickerColumn(
+                        "Start",
+                        startTime,
+                        onStartTimeChange,
+                        Color(0xFFE8F5E9),
+                        Color(0xFF2E7D32)
                     )
-
-                    // 2. The Text Content
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "Run until tank is full",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFF1C1C1E)
+                    Text("→", color = TextSecondary, fontSize = 18.sp)
+                    if (!untilFull) {
+                        TimePickerColumn(
+                            "End",
+                            endTime,
+                            onEndTimeChange,
+                            Color(0xFFE3F2FD),
+                            Color(0xFF1565C0)
                         )
-                        Text(
-                            text = "Ignores end time, stops when high sensor triggers",
-                            fontSize = 11.sp,
-                            color = Color(0xFF8E8E93),
-                            lineHeight = 14.sp
-                        )
+                    } else {
+                        UntilFullPlaceholder()
                     }
                 }
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(24.dp))
+                UntilFullToggle(untilFull, onToggle = onUntilFullChange)
+                Spacer(Modifier.height(24.dp))
 
-                // ✅ Better action buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -537,21 +409,19 @@ fun TimeRangeDialog(
                         onClick = onDismiss,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Cancel", color = Color(0xFF8E8E93))
-                    }
+                    ) { Text("Cancel", color = TextSecondary) }
                     Button(
                         onClick = {
-                            onSave(startTime, if (untilFull) null else endTime, untilFull)
+                            onSave(
+                                startTime,
+                                if (untilFull) null else endTime,
+                                untilFull
+                            )
                         },
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1976D2)
-                        )
-                    ) {
-                        Text("Save")
-                    }
+                        colors = ButtonDefaults.buttonColors(containerColor = ActiveBlue)
+                    ) { Text("Save") }
                 }
             }
         }
@@ -559,59 +429,108 @@ fun TimeRangeDialog(
 }
 
 @Composable
-fun WheelTimeGroup(
+fun TimePickerColumn(
     label: String,
     time: String,
-    onTimeChange: (String) -> Unit
+    onTimeChange: (String) -> Unit,
+    bg: Color,
+    txt: Color
 ) {
-    val hour = time.split(":")[0].toInt()
-    val min = time.split(":")[1].toInt()
-
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 12.sp)
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            VerticalWheelPicker(
-                count = 24,
-                currentValue = hour,
-                onValueChange = { newH -> onTimeChange("%02d:%02d".format(newH, min)) }
-            )
-            Text(":", fontWeight = FontWeight.Bold)
-            VerticalWheelPicker(
-                count = 60,
-                currentValue = min,
-                onValueChange = { newM -> onTimeChange("%02d:%02d".format(hour, newM)) }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(bg)
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+        ) {
+            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = txt)
+        }
+        Spacer(Modifier.height(8.dp))
+        WheelTimeGroup(time, onTimeChange)
+    }
+}
+
+@Composable
+fun UntilFullPlaceholder() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(OrangeBg)
+                .padding(horizontal = 12.dp, vertical = 3.dp)
+        ) {
+            Text("Auto", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = OrangeText)
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .size(64.dp, 132.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(OrangeBg), contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Until\nfull",
+                fontSize = 12.sp,
+                color = OrangeText,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
+@Composable
+fun UntilFullToggle(untilFull: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (untilFull) OrangeBg else Color(0xFFF9F9FB))
+            .clickable { onToggle(!untilFull) }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = untilFull,
+            onCheckedChange = null,
+            colors = CheckboxDefaults.colors(checkedColor = OrangeText)
+        )
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(
+                "Run until tank is full",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text("Stops when high sensor triggers", fontSize = 11.sp, color = TextSecondary)
+        }
+    }
+}
+
+@Composable
+fun WheelTimeGroup(time: String, onTimeChange: (String) -> Unit) {
+    val hour = time.split(":")[0].toIntOrNull() ?: 0
+    val min = time.split(":")[1].toIntOrNull() ?: 0
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        VerticalWheelPicker(24, hour) { onTimeChange("%02d:%02d".format(it, min)) }
+        Text(":", fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 2.dp))
+        VerticalWheelPicker(60, min) { onTimeChange("%02d:%02d".format(hour, it)) }
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun VerticalWheelPicker(
-    count: Int,
-    currentValue: Int,
-    onValueChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun VerticalWheelPicker(count: Int, currentValue: Int, onValueChange: (Int) -> Unit) {
     val itemHeight = 44.dp
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentValue)
-
-    // Sync the scroll position back to the state
     LaunchedEffect(listState.isScrollInProgress) {
-        if (!listState.isScrollInProgress) {
-            onValueChange(listState.firstVisibleItemIndex)
-        }
+        if (!listState.isScrollInProgress) onValueChange(
+            listState.firstVisibleItemIndex
+        )
     }
 
-    Box(
-        modifier = modifier
-            .width(64.dp)
-            .height(itemHeight * 3), // Show 3 items
-        contentAlignment = Alignment.Center
-    ) {
-        // Selection Overlay
+    Box(modifier = Modifier.size(50.dp, itemHeight * 3), contentAlignment = Alignment.Center) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -619,32 +538,23 @@ fun VerticalWheelPicker(
             color = Color(0xFFF2F2F7),
             shape = RoundedCornerShape(8.dp)
         ) {}
-
         LazyColumn(
             state = listState,
-            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize()
+            flingBehavior = rememberSnapFlingBehavior(listState),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item { Spacer(modifier = Modifier.height(itemHeight)) }
+            item { Spacer(Modifier.height(itemHeight)) }
             items(count) { index ->
-                Box(
-                    modifier = Modifier.height(itemHeight),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.height(itemHeight), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "%02d".format(index),
-                        style = androidx.compose.ui.text.TextStyle(
-                            fontSize = 20.sp,
-                            fontWeight = if (listState.firstVisibleItemIndex == index)
-                                FontWeight.Bold else FontWeight.Normal,
-                            color = if (listState.firstVisibleItemIndex == index)
-                                Color.Black else Color.LightGray
-                        )
+                        "%02d".format(index),
+                        fontSize = 18.sp,
+                        fontWeight = if (listState.firstVisibleItemIndex == index) FontWeight.Bold else FontWeight.Normal,
+                        color = if (listState.firstVisibleItemIndex == index) Color.Black else Color.LightGray
                     )
                 }
             }
-            item { Spacer(modifier = Modifier.height(itemHeight)) }
+            item { Spacer(Modifier.height(itemHeight)) }
         }
     }
 }
