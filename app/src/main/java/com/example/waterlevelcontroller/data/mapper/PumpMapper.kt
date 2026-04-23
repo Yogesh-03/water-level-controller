@@ -41,7 +41,7 @@ fun ScheduleDto.toDomain(): Schedule {
         days = days,
         isEnabled = isEnabled,
         untilFull = untilFull,
-        duration = duration
+        duration = "5"
     )
 }
 
@@ -52,7 +52,6 @@ fun Schedule.toDto(): ScheduleDto {
         endTime = endTime,
         days = days,
         isEnabled = isEnabled,
-        untilFull = untilFull,
-        duration = duration
+        untilFull = untilFull
     )
 }

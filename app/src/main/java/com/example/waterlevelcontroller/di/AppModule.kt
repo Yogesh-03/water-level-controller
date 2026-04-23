@@ -1,7 +1,9 @@
 package com.example.waterlevelcontroller.di
 
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
+import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
+import com.example.waterlevelcontroller.domain.repository.ScheduleRepository
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
@@ -31,4 +33,10 @@ object AppModule {
     fun provideRepository(
         firebase: FirebaseDataSource
     ): WaterRepository = WaterRepositoryImpl(firebase)
+
+    @Provides
+    @Singleton
+    fun provideScheduleRepository(
+
+    ): ScheduleRepository = ScheduleRepositoryImpl()
 }

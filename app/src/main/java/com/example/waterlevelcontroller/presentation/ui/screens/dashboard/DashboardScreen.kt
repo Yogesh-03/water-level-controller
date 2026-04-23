@@ -133,7 +133,8 @@ fun DashboardScreen(
                             }
                         )
                         Spacer(Modifier.height(12.dp))
-                        ModeCard(mode = p?.mode,
+                        ModeCard(
+                            mode = p?.mode,
                             onSwitchMode = {
                                 val nextMode = if (p?.mode == "auto") "manual" else "auto"
                                 viewModel.updateMode(nextMode)
@@ -146,10 +147,6 @@ fun DashboardScreen(
         }
     }
 }
-
-
-
-
 
 
 // ─── Tanks Row ────────────────────────────────────────────────
@@ -264,7 +261,7 @@ fun SensorPill(label: String, isOn: Boolean?, fontSize: TextUnit) {
             .background(bg)
             .padding(horizontal = 7.dp, vertical = 2.dp)
     ) {
-        Text(label, fontSize = fontSize , fontWeight = FontWeight.Medium, color = text)
+        Text(label, fontSize = fontSize, fontWeight = FontWeight.Medium, color = text)
     }
 }
 
@@ -368,7 +365,7 @@ fun PumpIcon(isOn: Boolean) {
 @Composable
 fun IOSToggle(isOn: Boolean, onToggle: () -> Unit) {
     val thumbOffset by animateFloatAsState(
-        targetValue = if (isOn)  1f else 0f,
+        targetValue = if (isOn) 1f else 0f,
         animationSpec = tween(200),
         label = "toggle"
     )
@@ -411,7 +408,8 @@ fun StatBox(label: String, value: String, valueColor: Color, modifier: Modifier 
 @Composable
 fun ModeCard(mode: String?, onSwitchMode: () -> Unit = {}) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable { onSwitchMode() }, // Make the whole card clickable
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
