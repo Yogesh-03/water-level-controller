@@ -67,6 +67,16 @@ fun FancyBottomBar(navController: NavController) {
         ) {
             SchedulerIcon(isActive = isScheduleActive)
         }
+
+        val isHistoryActive = currentRoute == "history"
+        NavItem(
+            label = "History",
+            isActive = isHistoryActive,
+            navController = navController,
+            route = "history"
+        ) {
+            SchedulerIcon(isActive = isScheduleActive)
+        }
     }
 }
 

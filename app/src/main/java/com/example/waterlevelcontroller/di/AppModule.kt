@@ -1,5 +1,7 @@
 package com.example.waterlevelcontroller.di
 
+import android.content.Context
+import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
 import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
@@ -10,6 +12,7 @@ import com.google.firebase.database.FirebaseDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -39,4 +42,14 @@ object AppModule {
     fun provideScheduleRepository(
 
     ): ScheduleRepository = ScheduleRepositoryImpl()
+
+    @Provides
+    @Singleton
+    fun provideNetworkMonitor(
+        @ApplicationContext context: Context
+    ): NetworkMonitor {
+        return NetworkMonitor(context)
+    }
+
+
 }

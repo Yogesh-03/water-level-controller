@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,19 +31,19 @@ import org.w3c.dom.Text
 
 // ─── Top Bar ──────────────────────────────────────────────────
 @Composable
-fun TopBar(text : String) {
+fun TopBar(text: String, isOnline: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary
-        )
-        LiveBadge()
+        Text(text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+
+        if (isOnline) {
+            LiveBadge()
+        } else {
+            OfflineBadge()
+        }
     }
 }
 
@@ -69,5 +70,31 @@ fun LiveBadge() {
                 .background(GreenDark.copy(alpha = alpha))
         )
         Text("Live", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = GreenDark)
+    }
+}
+
+@Composable
+fun OfflineBadge() {
+    val infiniteTransition = rememberInfiniteTransition(label = "offline")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(800), RepeatMode.Reverse),
+        label = "pulse"
+    )
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.Red.copy(alpha = 0.1f))
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(7.dp)
+                .clip(CircleShape)
+                .background(Color.Red.copy(alpha = alpha))
+        )
+        Text("Offline", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Red)
     }
 }

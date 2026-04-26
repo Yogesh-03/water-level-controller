@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.*
 import com.example.waterlevelcontroller.presentation.ui.components.bottomnav.FancyBottomBar
 import com.example.waterlevelcontroller.presentation.ui.screens.dashboard.DashboardScreen
+import com.example.waterlevelcontroller.presentation.ui.screens.history.HistoryScreen
 import com.example.waterlevelcontroller.presentation.ui.screens.schedule.ScheduleScreen
 
 @Composable
@@ -33,6 +34,11 @@ fun MainScreen() {
             composable("schedule") {
                 ScheduleScreen()
             }
+
+            composable("history") {
+                HistoryScreen()
+            }
+
         }
     }
 }

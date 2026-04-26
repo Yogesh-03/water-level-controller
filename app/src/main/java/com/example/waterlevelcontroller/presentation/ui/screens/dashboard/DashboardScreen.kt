@@ -2,6 +2,7 @@ package com.example.waterlevelcontroller.presentation.ui.screens.dashboard
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -47,7 +49,10 @@ fun DashboardScreen(
 ) {
     val waterLevelState by viewModel.waterLevelState.collectAsState()
     val pumpControlState by viewModel.pumpControlState.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    val isUpdating by viewModel.isUpdating.collectAsState()
+    val isOnline by viewModel.isOnline.collectAsState()
 
 
 
@@ -55,94 +60,125 @@ fun DashboardScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = ScreenBg
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            //StatusBar()
 
+        // 🔥 ROOT BOX (important for blocking clicks)
+        Box(modifier = Modifier.fillMaxSize()) {
+
+            // 🔥 MAIN UI
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .fillMaxSize()
+                    .padding(padding)
+                    .alpha(if (isOnline) 1f else 0.5f) // dim UI when offline
             ) {
-                TopBar("Pump Controller")
-                Spacer(Modifier.height(16.dp))
 
-                when (waterLevelState) {
-                    is Resource.Loading -> {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = ActiveBlue)
-                        }
-                    }
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
 
-                    is Resource.Error -> {
-                        ErrorCard(
-                            (waterLevelState as Resource.Error).message ?: "Error loading sensors"
-                        )
-                    }
+                    // 🔥 Top Bar (Live / Offline)
+                    TopBar("Pump Controller", isOnline)
 
-                    is Resource.Success -> {
-                        val w = (waterLevelState as Resource.Success).data
-                        TanksRow(
-                            ohHigh = w?.overheadHigh,
-                            ohLow = w?.overheadLow,
-                            ugHigh = w?.undergroundHigh,
-                            ugLow = w?.undergroundLow
-                        )
-                    }
-                }
+                    Spacer(Modifier.height(16.dp))
 
-                Spacer(Modifier.height(12.dp))
+                    // ───────── WATER LEVEL ─────────
+                    when (waterLevelState) {
 
-                when (pumpControlState) {
-                    is Resource.Loading -> {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                                .height(120.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(color = ActiveBlue)
-                        }
-                    }
-
-                    is Resource.Error -> {
-                        ErrorCard(
-                            (pumpControlState as Resource.Error).message ?: "Error loading pump"
-                        )
-                    }
-
-                    is Resource.Success -> {
-                        val p = (pumpControlState as Resource.Success).data
-                        PumpCard(
-                            pumpState = p?.pumpState,
-                            manualPump = p?.manualPump,
-                            onToggle = {
-                                // Use the helper we built in the ViewModel
-                                viewModel.togglePump(!(p?.pumpState ?: false))
-//                                val manualPumpMode = if(p?.mode == "auto") "on" else "off"
-//                                viewModel.updateManualPump(manualPumpMode)
+                        is Resource.Loading -> {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(160.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = ActiveBlue)
                             }
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        ModeCard(
-                            mode = p?.mode,
-                            onSwitchMode = {
-                                val nextMode = if (p?.mode == "auto") "manual" else "auto"
-                                viewModel.updateMode(nextMode)
-                            })
-                    }
-                }
+                        }
 
-                Spacer(Modifier.height(12.dp))
+                        is Resource.Error -> {
+                            ErrorCard(
+                                (waterLevelState as Resource.Error).message
+                                    ?: "Error loading sensors"
+                            )
+                        }
+
+                        is Resource.Success -> {
+                            val w = (waterLevelState as Resource.Success).data
+                            TanksRow(
+                                ohHigh = w?.overheadHigh,
+                                ohLow = w?.overheadLow,
+                                ugHigh = w?.undergroundHigh,
+                                ugLow = w?.undergroundLow
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // ───────── PUMP CONTROL ─────────
+                    when (pumpControlState) {
+
+                        is Resource.Loading -> {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(color = ActiveBlue)
+                            }
+                        }
+
+                        is Resource.Error -> {
+                            ErrorCard(
+                                (pumpControlState as Resource.Error).message
+                                    ?: "Error loading pump"
+                            )
+                        }
+
+                        is Resource.Success -> {
+                            val p = (pumpControlState as Resource.Success).data
+
+                            PumpCard(
+                                pumpState = p?.pumpState,
+                                manualPump = p?.manualPump,
+                                onToggle = {
+                                    val currentState = p?.pumpState ?: false
+                                    viewModel.togglePump(!currentState)
+                                }
+                            )
+
+                            Spacer(Modifier.height(12.dp))
+
+                            ModeCard(
+                                mode = p?.mode,
+                                onSwitchMode = {
+                                    val nextMode =
+                                        if (p?.mode == "auto") "manual" else "auto"
+                                    viewModel.updateMode(nextMode)
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
+
+            // 🔥 BLOCK ALL TOUCHES WHEN OFFLINE
+            if (!isOnline) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Transparent)
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { } // consume clicks
+                )
             }
         }
     }
@@ -363,19 +399,25 @@ fun PumpIcon(isOn: Boolean) {
 }
 
 @Composable
-fun IOSToggle(isOn: Boolean, onToggle: () -> Unit) {
+fun IOSToggle(
+    isOn: Boolean,
+    enabled: Boolean = true, // Add this
+    onToggle: () -> Unit
+) {
     val thumbOffset by animateFloatAsState(
         targetValue = if (isOn) 1f else 0f,
         animationSpec = tween(200),
         label = "toggle"
     )
+
     Box(
         modifier = Modifier
             .width(50.dp)
             .height(28.dp)
             .clip(RoundedCornerShape(14.dp))
+            .alpha(if (enabled) 1f else 0.5f) // Visual feedback for "busy"
             .background(if (isOn) ToggleGreen else Color(0xFFD1D1D6))
-            .clickable { onToggle() },
+            .clickable(enabled = enabled) { onToggle() }, // Disable clicks while loading
         contentAlignment = Alignment.CenterStart
     ) {
         Box(

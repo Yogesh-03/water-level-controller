@@ -84,7 +84,7 @@ fun ScheduleScreen() {
                 modifier = Modifier
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                TopBar("Pump Scheduler")
+                //TopBar("Pump Scheduler")
                 Spacer(modifier = Modifier.height(16.dp))
                 NextScheduleCard()
                 Spacer(modifier = Modifier.height(24.dp))
