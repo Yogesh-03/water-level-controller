@@ -46,11 +46,11 @@ class FirebaseDataSource @Inject constructor(
      */
     suspend fun updatePumpControl(data: PumpControlDto) {
 
-        // 🔹 Prepare update map (partial update)
+        //  Prepare update map (partial update)
         val updates = mapOf(
-            "mode" to (data.mode ?: "Auto"),
-            "pumpState" to (data.pumpState ?: false),
-            "manualPump" to (data.manualPump ?: "Off")
+            FirebasePaths.MODE_DESIRED to (data.mode ?: "Auto"),
+            FirebasePaths.PUMP_STATE_DESIRED to (data.pumpState ?: false),
+            FirebasePaths.MANUAL_PUMP_DESIRED to (data.manualPump ?: "Off")
         )
 
         try {
@@ -89,7 +89,7 @@ class FirebaseDataSource @Inject constructor(
             override fun onDataChange(snapshot: DataSnapshot) {
 
                 /**
-                 * 🔄 Mapping Snapshot → DTO
+                 *  Mapping Snapshot → DTO
                  *
                  * Reads values safely (nullable)
                  * Firebase may return null if key doesn't exist
@@ -105,15 +105,21 @@ class FirebaseDataSource @Inject constructor(
                         .getValue(Boolean::class.java),
 
                     undergroundHigh = snapshot.child(FirebasePaths.UG_HIGH)
-                        .getValue(Boolean::class.java)
+                        .getValue(Boolean::class.java),
+
+                    humidity =  snapshot.child(FirebasePaths.HUMIDITY)
+                        .getValue(Float::class.java),
+
+                    temperature =  snapshot.child(FirebasePaths.TEMPERATURE)
+                        .getValue(Float::class.java)
                 )
 
-                // 📤 Emit data to Flow
+                // Emit data to Flow
                 trySend(dto)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                // ❌ Close flow with error
+                // Close flow with error
                 close(error.toException())
             }
         }
@@ -131,7 +137,7 @@ class FirebaseDataSource @Inject constructor(
     /**
      *  Observe Pump Control State
      *
-     * Emits real-time updates for:
+     * Emits real-time updates for actual state of PUMP:
      * - Pump ON/OFF state
      * - Mode (Auto/Manual)
      * - Manual pump trigger
@@ -147,25 +153,25 @@ class FirebaseDataSource @Inject constructor(
             override fun onDataChange(snapshot: DataSnapshot) {
 
                 /**
-                 * 🔄 Snapshot → PumpControlDto
+                 *  Snapshot → PumpControlDto
                  */
                 val dto = PumpControlDto(
-                    pumpState = snapshot.child(FirebasePaths.PUMP_STATE)
+                    pumpState = snapshot.child(FirebasePaths.PUMP_STATE_REPORTED)
                         .getValue(Boolean::class.java),
 
-                    mode = snapshot.child(FirebasePaths.MODE)
+                    mode = snapshot.child(FirebasePaths.MODE_REPORTED)
                         .getValue(String::class.java),
 
-                    manualPump = snapshot.child(FirebasePaths.MANUAL_PUMP)
+                    manualPump = snapshot.child(FirebasePaths.MANUAL_PUMP_REPORTED)
                         .getValue(String::class.java)
                 )
 
-                // 📤 Emit updated state
+                //Emit updated state
                 trySend(dto)
             }
 
             override fun onCancelled(error: DatabaseError) {
-                // ❌ Propagate error
+                //Propagate error
                 close(error.toException())
             }
         }

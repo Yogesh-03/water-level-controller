@@ -75,7 +75,7 @@ fun FancyBottomBar(navController: NavController) {
             navController = navController,
             route = "history"
         ) {
-            SchedulerIcon(isActive = isScheduleActive)
+            HistoryIcon(isActive = isHistoryActive)
         }
     }
 }
@@ -149,6 +149,72 @@ fun SchedulerIcon(isActive: Boolean) {
 }
 
 @Composable
+fun HistoryIcon(isActive: Boolean) {
+    val color = if (isActive) ActiveBlue else TextSecondary
+
+    Canvas(modifier = Modifier.size(22.dp)) {
+        val center = Offset(size.width / 2f, size.height / 2f)
+        val radius = size.minDimension / 2f
+        val strokeWidth = 1.5.dp.toPx()
+
+        // Outer circle
+        drawCircle(
+            color = color,
+            radius = radius,
+            style = Stroke(width = strokeWidth)
+        )
+
+        // Clock hand - hour (short)
+        drawLine(
+            color = color,
+            start = center,
+            end = Offset(center.x - radius * 0.4f, center.y - radius * 0.4f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+
+        // Clock hand - minute (long)
+        drawLine(
+            color = color,
+            start = center,
+            end = Offset(center.x + radius * 0.5f, center.y - radius * 0.1f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+
+        // Counter-clockwise arrow at top left of circle
+        val arrowRadius = radius * 0.75f
+        drawArc(
+            color = color,
+            startAngle = 160f,
+            sweepAngle = -240f,
+            useCenter = false,
+            topLeft = Offset(center.x - arrowRadius, center.y - arrowRadius),
+            size = Size(arrowRadius * 2, arrowRadius * 2),
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+        )
+
+        // Arrow head at end of arc
+        val arrowTipX = center.x - arrowRadius * 0.55f
+        val arrowTipY = center.y + arrowRadius * 0.75f
+        drawLine(
+            color = color,
+            start = Offset(arrowTipX, arrowTipY),
+            end = Offset(arrowTipX - 4.dp.toPx(), arrowTipY - 1.dp.toPx()),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(arrowTipX, arrowTipY),
+            end = Offset(arrowTipX + 1.dp.toPx(), arrowTipY - 4.dp.toPx()),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
 fun NavItem(
     label: String,
     navController: NavController,
@@ -166,6 +232,7 @@ fun NavItem(
                     launchSingleTop = true
                 }
             }
+            .padding(horizontal = 32.dp, vertical = 8.dp)
     ) {
         icon()
         Text(label, fontSize = 10.sp, color = if (isActive) ActiveBlue else TextSecondary)
