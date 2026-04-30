@@ -5,17 +5,24 @@ import androidx.lifecycle.viewModelScope
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.domain.model.PumpControl
+import com.example.waterlevelcontroller.domain.model.PumpField
 import com.example.waterlevelcontroller.domain.model.Sensor
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -40,6 +47,28 @@ class DashboardViewModel @Inject constructor(
     private val _isUpdating = MutableStateFlow(false)
     val isUpdating: StateFlow<Boolean> = _isUpdating.asStateFlow()
 
+
+    private val _desiredPumpState = MutableStateFlow<Boolean?>(null)
+
+    // 3. The "Syncing" logic
+    val isSyncing: Flow<Boolean> = combine(
+        pumpControlState,
+        _desiredPumpState
+    ) { reported, desired ->
+        if (desired == null) return@combine false
+
+        val reportedValue = (reported as? Resource.Success)?.data?.pumpState
+
+        // Logic: Is what the hardware says different from what the user wants?
+        reportedValue != desired
+    }
+        .distinctUntilChanged() // 👈 THIS IS CRITICAL
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
+
     init {
         observeData()
     }
@@ -49,69 +78,46 @@ class DashboardViewModel @Inject constructor(
      * Using collectLatest ensures we don't process stale data if updates are rapid.
      */
     private fun observeData() {
-        viewModelScope.launch {
-            repository.observePumpControl().collectLatest { resource ->
-                _pumpControlState.value = resource
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.observePumpControl().onStart {
+                _pumpControlState.value = Resource.Loading()
             }
+                .catch { e ->
+                    _pumpControlState.value = Resource.Error(e.message ?: "Connection Failed")
+                }
+                .collectLatest { resource ->
+                    _pumpControlState.value = resource
+                }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repository.observeWaterLevels().collectLatest { resource ->
                 _waterLevelState.value = resource
             }
         }
     }
 
-    /**
-     * Sends new data to the Repository.
-     * We don't update local state manually; we let the Firebase listener handle it.
-     */
-    fun updatePumpControl(data: PumpControl)  {
+
+    private fun <T> performUpdate(field: PumpField, value: T) {
         viewModelScope.launch(Dispatchers.IO) {
-            _isUpdating.value = true
-            val result = repository.updatePumpControl(data)
+            _updateState.value = Resource.Loading()
+            val result = repository.updatePumpField(field, value)
             _updateState.value = result
-
-            // If there's an error, you might want to trigger a UI event (like a Snackbar)
-            if (result is Resource.Error) {
-                // Log or handle error
-            }
-
-            _isUpdating.value = false
         }
     }
 
-    /**
-     * Helper to toggle pump state without needing the UI to construct the full object.
-     */
-    fun togglePump(isOn: Boolean)   {
-        viewModelScope.launch {
-            val currentData = (pumpControlState.value as? Resource.Success)?.data
-            currentData?.let {
-                updatePumpControl(it.copy(pumpState = isOn))
-                if (currentData.mode == "auto" && isOn) {
-                   // updateManualPump("on")
-                }
-            }
+    fun togglePump(isOn: Boolean) {
+        viewModelScope.launch(Dispatchers.IO){
+            _desiredPumpState.value = isOn
+            performUpdate(PumpField.STATE, isOn)
         }
     }
 
-    /**
-     * Helper to change the operation mode (e.g., "Auto", "Manual")
-     */
     fun updateMode(mode: String) {
-        val currentData = (pumpControlState.value as? Resource.Success)?.data
-        currentData?.let {
-            updatePumpControl(it.copy(mode = mode))
-
-        }
+        performUpdate(PumpField.MODE, mode)
     }
 
-    fun updateManualPump(manualPump: String){
-        val currentData = (pumpControlState.value as? Resource.Success)?.data
-        currentData?.let {
-            updatePumpControl(it.copy(manualPump = manualPump))
-        }
-
+    fun updateManualPump(manualPump: String) {
+        performUpdate(PumpField.MANUAL_CONTROL, manualPump)
     }
 }

@@ -1,5 +1,7 @@
 package com.example.waterlevelcontroller.data.repository
 
+import android.util.Log
+import com.example.waterlevelcontroller.core.constants.FirebasePaths
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.data.mapper.toPumpControl
 import com.example.waterlevelcontroller.data.mapper.toPumpControlDto
@@ -9,6 +11,7 @@ import com.example.waterlevelcontroller.domain.model.Sensor
 
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
 import com.example.waterlevelcontroller.domain.model.PumpControl
+import com.example.waterlevelcontroller.domain.model.PumpField
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -18,15 +21,6 @@ class WaterRepositoryImpl @Inject constructor(
     private val firebase: FirebaseDataSource
 ) : WaterRepository {
 
-
-    override suspend fun updatePumpControl(data: PumpControl): Resource<Unit> {
-        return try {
-            firebase.updatePumpControl(data.toPumpControlDto())
-            Resource.Success(Unit)
-        } catch (e : Exception){
-            Resource.Error(e.message ?: "Error")
-        }
-    }
 
     override fun observePumpControl(): Flow<Resource<PumpControl>> {
         return firebase.observePumpControl()
@@ -40,4 +34,20 @@ class WaterRepositoryImpl @Inject constructor(
         return firebase.observeWaterLevels()
             .map { Resource.Success(it.toSensors()) }
     }
+
+    override suspend fun <T> updatePumpField(field: PumpField, value: T): Resource<Unit> {
+        val path = when (field) {
+            PumpField.STATE -> FirebasePaths.PUMP_STATE_DESIRED
+            PumpField.MODE -> FirebasePaths.MODE_DESIRED
+            PumpField.MANUAL_CONTROL -> FirebasePaths.MANUAL_PUMP_DESIRED
+        }
+
+        return try {
+            firebase.updateSingleField(path, value)
+            Resource.Success(Unit)
+        } catch (e: Exception) {
+            Resource.Error(e.message ?: "Sync Failed")
+        }
+    }
+
 }

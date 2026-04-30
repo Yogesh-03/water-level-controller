@@ -2,8 +2,10 @@ package com.example.waterlevelcontroller.data.remote
 
 import android.util.Log
 import com.example.waterlevelcontroller.core.constants.FirebasePaths
+import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.data.model.dto.PumpControlDto
 import com.example.waterlevelcontroller.data.model.dto.SensorDto
+import com.example.waterlevelcontroller.domain.model.PumpField
 import com.google.firebase.database.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -26,45 +28,6 @@ import javax.inject.Inject
 class FirebaseDataSource @Inject constructor(
     private val db: DatabaseReference
 ) {
-
-    /**
-     *  Update Pump Control Fields
-     *
-     * Updates pump-related fields in Firebase:
-     * - mode
-     * - pumpState
-     * - manualPump
-     *
-     *  Logic:
-     * - Uses safe defaults if values are null
-     * - Uses updateChildren → only updates specified fields (partial update)
-     *
-     * ⚠Important:
-     * - Does NOT overwrite entire node
-     * - Prevents accidental data loss
-     * @param PumpControlDto
-     */
-    suspend fun updatePumpControl(data: PumpControlDto) {
-
-        //  Prepare update map (partial update)
-        val updates = mapOf(
-            FirebasePaths.MODE_DESIRED to (data.mode ?: "Auto"),
-            FirebasePaths.PUMP_STATE_DESIRED to (data.pumpState ?: false),
-            FirebasePaths.MANUAL_PUMP_DESIRED to (data.manualPump ?: "Off")
-        )
-
-        try {
-            // 🔹 Push update to Firebase
-            db.updateChildren(updates).await()
-
-        } catch (e: Exception) {
-            // ❌ Log + rethrow for upper layers (repository/viewmodel)
-            Log.e("FirebaseDataSource", "Update failed", e)
-            throw e
-        }
-    }
-
-
     /**
      *  Observe Water Level Sensors
      *
@@ -91,7 +54,7 @@ class FirebaseDataSource @Inject constructor(
                 /**
                  *  Mapping Snapshot → DTO
                  *
-                 * Reads values safely (nullable)
+                 * Reads actual sensor values safely (nullable)
                  * Firebase may return null if key doesn't exist
                  */
                 val dto = SensorDto(
@@ -107,10 +70,10 @@ class FirebaseDataSource @Inject constructor(
                     undergroundHigh = snapshot.child(FirebasePaths.UG_HIGH)
                         .getValue(Boolean::class.java),
 
-                    humidity =  snapshot.child(FirebasePaths.HUMIDITY)
+                    humidity = snapshot.child(FirebasePaths.HUMIDITY)
                         .getValue(Float::class.java),
 
-                    temperature =  snapshot.child(FirebasePaths.TEMPERATURE)
+                    temperature = snapshot.child(FirebasePaths.TEMPERATURE)
                         .getValue(Float::class.java)
                 )
 
@@ -182,6 +145,15 @@ class FirebaseDataSource @Inject constructor(
         // Cleanup when Flow collector is gone
         awaitClose {
             ref.removeEventListener(listener)
+        }
+    }
+
+    suspend fun <T> updateSingleField(path: String, value: T) {
+        try {
+            db.child(path).setValue(value).await()
+        } catch (e: Exception) {
+            Log.e("FirebaseDataSource", "Generic update failed at $path", e)
+            throw e
         }
     }
 }

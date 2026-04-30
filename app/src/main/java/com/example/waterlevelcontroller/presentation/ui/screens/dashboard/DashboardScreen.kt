@@ -1,5 +1,6 @@
 package com.example.waterlevelcontroller.presentation.ui.screens.dashboard
 
+import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -15,12 +16,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.modifier.modifierLocalOf
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.waterlevelcontroller.core.utils.Resource
@@ -42,6 +45,8 @@ import com.example.waterlevelcontroller.presentation.ui.theme.TextPrimary
 import com.example.waterlevelcontroller.presentation.ui.theme.TextSecondary
 import com.example.waterlevelcontroller.presentation.ui.theme.ToggleGreen
 
+import kotlinx.coroutines.flow.distinctUntilChanged
+
 
 @Composable
 fun DashboardScreen(
@@ -51,9 +56,10 @@ fun DashboardScreen(
     val pumpControlState by viewModel.pumpControlState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val isUpdating by viewModel.isUpdating.collectAsState()
+    val isUpdating = updateState is Resource.Loading
     val isOnline by viewModel.isOnline.collectAsState()
-
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isSyncing by viewModel.isSyncing.collectAsState(false)
 
 
     Scaffold(
@@ -63,6 +69,8 @@ fun DashboardScreen(
 
         // 🔥 ROOT BOX (important for blocking clicks)
         Box(modifier = Modifier.fillMaxSize()) {
+
+
 
             // 🔥 MAIN UI
             Column(
@@ -144,10 +152,22 @@ fun DashboardScreen(
 
                             PumpCard(
                                 pumpState = p?.pumpState,
-                                manualPump = p?.manualPump,
+                                manualPump = p?.manualPump, // Pass the loading state here
                                 onToggle = {
                                     val currentState = p?.pumpState ?: false
                                     viewModel.togglePump(!currentState)
+                                    when(updateState){
+                                        is Resource.Error<*> ->{
+
+                                        }
+                                        is Resource.Loading<*> -> {
+                                            Toast.makeText(context, "Synchronizing with hardware...", Toast.LENGTH_SHORT).show()
+                                        }
+                                        is Resource.Success<*> -> {
+                                            Toast.makeText(context, "Successfull", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+
                                 }
                             )
 
@@ -179,6 +199,36 @@ fun DashboardScreen(
                             interactionSource = remember { MutableInteractionSource() }
                         ) { } // consume clicks
                 )
+            }
+
+            if (isSyncing) {
+                // 🔒 Full-screen overlay that blocks interaction and shows a loader
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(Unit) {} // This blocks all touch events from reaching the UI below
+                        .background(Color.Black.copy(alpha = 0.4f)), // Darken slightly more for focus
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(64.dp), // Make the circle bigger
+                            color = ActiveBlue,
+                            strokeWidth = 6.dp, // Thinner stroke so it can actually "rotate"
+                            trackColor = Color.White.copy(alpha = 0.1f), // Optional: shows the path
+                            strokeCap = StrokeCap.Round // Makes the spinning head rounded and professional
+                        )
+                        Text(
+                            text = "Synchronizing with Motor...",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }
@@ -301,13 +351,18 @@ fun SensorPill(label: String, isOn: Boolean?, fontSize: TextUnit) {
     }
 }
 
-// ─── Pump Card ────────────────────────────────────────────────
 @Composable
-fun PumpCard(pumpState: Boolean?, manualPump: String?, onToggle: () -> Unit) {
+fun PumpCard(
+    pumpState: Boolean?,
+    manualPump: String?,
+    onToggle: () -> Unit
+) {
     val isOn = pumpState == true
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth(),
+            // Visual cue: Card looks slightly "disabled" while loading
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         border = BorderStroke(0.5.dp, CardBorder),
@@ -330,6 +385,8 @@ fun PumpCard(pumpState: Boolean?, manualPump: String?, onToggle: () -> Unit) {
                             .background(if (isOn) GreenLight else PillGray),
                         contentAlignment = Alignment.Center
                     ) {
+                        // If loading, you could replace the icon with a tiny spinner
+                        // or just keep the PumpIcon
                         PumpIcon(isOn)
                     }
                     Column {
@@ -340,13 +397,18 @@ fun PumpCard(pumpState: Boolean?, manualPump: String?, onToggle: () -> Unit) {
                             color = TextPrimary
                         )
                         Text(
-                            if (isOn) "Running" else "Stopped",
+                             if (isOn) "Running" else "Stopped",
                             fontSize = 11.sp,
                             color = if (isOn) GreenDark else TextSecondary
                         )
                     }
                 }
-                IOSToggle(isOn = isOn, onToggle = onToggle)
+
+                // Disable the toggle while the API/Hardware is busy
+                IOSToggle(
+                    isOn = isOn,
+                    onToggle = { onToggle() }
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -367,7 +429,8 @@ fun PumpCard(pumpState: Boolean?, manualPump: String?, onToggle: () -> Unit) {
                     label = "Manual pump",
                     value = manualPump?.replaceFirstChar { it.uppercase() } ?: "—",
                     valueColor = if (manualPump == "on") GreenDark else TextPrimary,
-                    modifier = Modifier.weight(1f))
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

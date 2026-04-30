@@ -2,15 +2,12 @@ package com.example.waterlevelcontroller.core.constants
 
 object FirebasePaths {
 
-    const val HUMIDITY = "sensors/humidity"
-    const val TEMPERATURE = "sensors/temperature"
-    const val OH_LOW = "sensors/overheadLow"
-    const val OH_HIGH = "sensors/overheadHigh"
-
-    const val UG_LOW = "sensors/undergroundLow"
-    const val UG_HIGH = "sensors/undergroundHigh"
-
-    //    const val MANUAL_PUMP = "manualPump"
+    const val HUMIDITY = "sensors/environment/humidity"
+    const val TEMPERATURE = "sensors/environment/temperature"
+    const val OH_LOW = "sensors/overhead/low"
+    const val OH_HIGH = "sensors/overhead/high"
+    const val UG_LOW = "sensors/underground/low"
+    const val UG_HIGH = "sensors/underground/high"
     const val MANUAL_PUMP_DESIRED = "controls/manualPump/desired"
     const val MANUAL_PUMP_REPORTED = "controls/manualPump/reported"
     const val MODE_DESIRED = "controls/mode/desired"

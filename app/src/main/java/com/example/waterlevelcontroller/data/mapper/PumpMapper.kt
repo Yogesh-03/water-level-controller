@@ -32,26 +32,26 @@ fun PumpControl.toPumpControlDto(): PumpControlDto {
     )
 }
 
-fun ScheduleDto.toDomain(): Schedule {
-    return Schedule(
-        id = id ?: "",
-        title = title,
-        startTime = startTime,
-        endTime = endTime,
-        days = days,
-        isEnabled = isEnabled,
-        untilFull = untilFull,
-        duration = "5"
-    )
-}
+//fun ScheduleDto.toDomain(): Schedule {
+//    return Schedule(
+//        id = id ?: "",
+//        title = title,
+//        startTime = startTime,
+//        endTime = endTime,
+//        days = days,
+//        isEnabled = isEnabled,
+//        untilFull = untilFull,
+//        duration = "5"
+//    )
+//}
 
-fun Schedule.toDto(): ScheduleDto {
-    return ScheduleDto(
-        title = title,
-        startTime = startTime,
-        endTime = endTime,
-        days = days,
-        isEnabled = isEnabled,
-        untilFull = untilFull
-    )
-}
+//fun Schedule.toDto(): ScheduleDto {
+//    return ScheduleDto(
+//        title = title,
+//        startTime = startTime,
+//        endTime = endTime,
+//        days = days,
+//        isEnabled = isEnabled,
+//        untilFull = untilFull
+//    )
+//}
