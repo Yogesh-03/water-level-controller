@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
 import com.example.waterlevelcontroller.data.remote.PumpDataSource
+import com.example.waterlevelcontroller.data.remote.ScheduleDataSource
 import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
 import com.example.waterlevelcontroller.domain.repository.ScheduleRepository
@@ -40,15 +41,16 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun providePumpRepository(
+    fun providePumpDataSource(
         pumpDataSource : PumpDataSource
     ) : WaterRepository = WaterRepositoryImpl(pumpDataSource)
 
     @Provides
     @Singleton
-    fun provideScheduleRepository(
+    fun provideScheduleDataSource(
+        scheduleDataSource: ScheduleDataSource
+    ) : ScheduleRepository = ScheduleRepositoryImpl(scheduleDataSource)
 
-    ): ScheduleRepository = ScheduleRepositoryImpl()
 
     @Provides
     @Singleton

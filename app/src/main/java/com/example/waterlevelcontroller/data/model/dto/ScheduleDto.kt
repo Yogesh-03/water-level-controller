@@ -1,16 +1,29 @@
 package com.example.waterlevelcontroller.data.model.dto
 
+/**
+ * Represents the full Schedule object in Firebase Realtime Database.
+ */
 data class ScheduleDto(
-    val id: String? = null,
+    val id: String = "",
     val title: String = "",
-    val startTime: String = "",
-    val endTime: String? = null,
-    val days: List<Int> = emptyList(), // Industry uses 1-7 for days
-    val untilFull: Boolean = false,
+    // Metadata for collaboration
+    val createdBy: String = "",
+    val lastEditedBy: String = "",
+    val lastEditedName: String = "",
+    val lastUpdated: Long = 0L,
 
-    // THE DIGITAL SHADOW PART
-    val isEnabled: Boolean = true,       // APP WRITES THIS
-    val isSynced: Boolean = false,       // ESP32 WRITES THIS (True when it gets the update)
-    val lastError: String? = null,       // ESP32 WRITES THIS (e.g., "Invalid Time")
-    val version: Int = 1                 // APP INCREMENTS THIS on every save
+    // Shadow Nodes
+    val desired: ScheduleStateDto? = null,
+    val reported: ScheduleStateDto? = null
+)
+
+/**
+ * The specific hardware parameters that the ESP32 needs to process.
+ */
+data class ScheduleStateDto(
+    val start: String = "",
+    val end: String? = null,
+    val activeDays: List<Int> = emptyList(),
+    val isEnabled: Boolean = false,
+    val untilFull: Boolean = false
 )
