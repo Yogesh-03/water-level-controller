@@ -3,6 +3,7 @@ package com.example.waterlevelcontroller.di
 import android.content.Context
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
+import com.example.waterlevelcontroller.data.remote.PumpDataSource
 import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
 import com.example.waterlevelcontroller.domain.repository.ScheduleRepository
@@ -31,11 +32,17 @@ object AppModule {
         db: DatabaseReference
     ) = FirebaseDataSource(db)
 
+//        @Provides
+//        @Singleton
+//        fun provideRepository(
+//            firebase: FirebaseDataSource
+//        ): WaterRepository = WaterRepositoryImpl(firebase)
+
     @Provides
     @Singleton
-    fun provideRepository(
-        firebase: FirebaseDataSource
-    ): WaterRepository = WaterRepositoryImpl(firebase)
+    fun providePumpRepository(
+        pumpDataSource : PumpDataSource
+    ) : WaterRepository = WaterRepositoryImpl(pumpDataSource)
 
     @Provides
     @Singleton

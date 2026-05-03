@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.waterlevelcontroller.domain.model.Schedule
 import com.example.waterlevelcontroller.domain.model.ScheduleSettings
 import com.example.waterlevelcontroller.domain.model.SyncStatus
@@ -54,7 +55,13 @@ data class ScheduleUiModel(
 // -------------------- MAIN SCREEN --------------------
 
 @Composable
-fun ScheduleScreen() {
+fun ScheduleScreen(
+    viewModel: ScheduleViewModel = hiltViewModel()
+) {
+
+    val isOnline by viewModel.isOnline.collectAsState()
+
+
     val schedules = remember {
         mutableStateListOf(
             ScheduleUiModel(
@@ -88,7 +95,11 @@ fun ScheduleScreen() {
             isEnabled = true,
             untilFull = true
         ),
-        syncStatus = SyncStatus.Pending // Digital Shadow starts as Pending
+        syncStatus = SyncStatus.Pending,
+        createdBy = "Hello",
+        lastEditedBy = "Hello",
+        lastEditedName = "Hello",
+        lastUpdated = 456L // Digital Shadow starts as Pending
     )
 
 
@@ -106,9 +117,9 @@ fun ScheduleScreen() {
             // --- FIXED SECTION ---
             Column(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
             ) {
-                //TopBar("Pump Scheduler")
+                TopBar("Pump Scheduler", isOnline)
                 Spacer(modifier = Modifier.height(16.dp))
                 NextScheduleCard()
                 Spacer(modifier = Modifier.height(24.dp))

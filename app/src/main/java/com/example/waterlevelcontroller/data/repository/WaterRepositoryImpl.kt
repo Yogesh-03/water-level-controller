@@ -10,6 +10,7 @@ import com.example.waterlevelcontroller.data.model.dto.PumpControlDto
 import com.example.waterlevelcontroller.domain.model.Sensor
 
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
+import com.example.waterlevelcontroller.data.remote.PumpDataSource
 import com.example.waterlevelcontroller.domain.model.PumpControl
 import com.example.waterlevelcontroller.domain.model.PumpField
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
@@ -18,12 +19,12 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 class WaterRepositoryImpl @Inject constructor(
-    private val firebase: FirebaseDataSource
+    private val pumpDataSource: PumpDataSource
 ) : WaterRepository {
 
 
     override fun observePumpControl(): Flow<Resource<PumpControl>> {
-        return firebase.observePumpControl()
+        return pumpDataSource.observePumpControl()
             .map {
                 Resource.Success(it.toPumpControl())
             }
@@ -31,7 +32,7 @@ class WaterRepositoryImpl @Inject constructor(
     }
 
     override fun observeWaterLevels(): Flow<Resource<Sensor>> {
-        return firebase.observeWaterLevels()
+        return pumpDataSource.observeWaterLevels()
             .map { Resource.Success(it.toSensors()) }
     }
 
@@ -43,7 +44,7 @@ class WaterRepositoryImpl @Inject constructor(
         }
 
         return try {
-            firebase.updateSingleField(path, value)
+            pumpDataSource.updateSingleField(path, value)
             Resource.Success(Unit)
         } catch (e: Exception) {
             Resource.Error(e.message ?: "Sync Failed")

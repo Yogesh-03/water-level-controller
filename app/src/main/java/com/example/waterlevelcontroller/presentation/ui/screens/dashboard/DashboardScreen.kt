@@ -61,6 +61,25 @@ fun DashboardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val isSyncing by viewModel.isSyncing.collectAsState(false)
 
+    // --- SYNC FAILURE TOAST ---
+    LaunchedEffect(updateState) {
+        if (updateState is Resource.Error) {
+            val errorMessage = (updateState as Resource.Error).message
+
+            if (errorMessage?.contains("Hardware Timeout") == true) {
+                // This triggers when the 10-second timer in ViewModel expires
+                Toast.makeText(
+                    context,
+                    "Sync Failed: Motor not responding. Reverting changes...",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else if (errorMessage != null) {
+                // General network or Firebase errors
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -161,10 +180,10 @@ fun DashboardScreen(
 
                                         }
                                         is Resource.Loading<*> -> {
-                                            Toast.makeText(context, "Synchronizing with hardware...", Toast.LENGTH_SHORT).show()
+                                            //Toast.makeText(context, "Synchronizing with hardware...", Toast.LENGTH_SHORT).show()
                                         }
                                         is Resource.Success<*> -> {
-                                            Toast.makeText(context, "Successfull", Toast.LENGTH_SHORT).show()
+                                            //Toast.makeText(context, "Successfull", Toast.LENGTH_SHORT).show()
                                         }
                                     }
 
@@ -188,7 +207,7 @@ fun DashboardScreen(
                 }
             }
 
-            // 🔥 BLOCK ALL TOUCHES WHEN OFFLINE
+            // BLOCK ALL TOUCHES WHEN OFFLINE
             if (!isOnline) {
                 Box(
                     modifier = Modifier
@@ -202,25 +221,27 @@ fun DashboardScreen(
             }
 
             if (isSyncing) {
-                // 🔒 Full-screen overlay that blocks interaction and shows a loader
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(Unit) {} // This blocks all touch events from reaching the UI below
-                        .background(Color.Black.copy(alpha = 0.4f)), // Darken slightly more for focus
+                        .zIndex(10f) // Ensure it's on top of everything
+                        .pointerInput(Unit) {}
+                        .background(Color.Black.copy(alpha = 0.4f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(64.dp), // Make the circle bigger
-                            color = ActiveBlue,
-                            strokeWidth = 6.dp, // Thinner stroke so it can actually "rotate"
-                            trackColor = Color.White.copy(alpha = 0.1f), // Optional: shows the path
-                            strokeCap = StrokeCap.Round // Makes the spinning head rounded and professional
-                        )
+                        // Use a Key to ensure the animation is preserved during sync
+                        key(isSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(64.dp),
+                                color = ActiveBlue,
+                                strokeWidth = 5.dp, // 6dp is okay, but 5dp is smoother for 64dp size
+                                strokeCap = StrokeCap.Round
+                            )
+                        }
                         Text(
                             text = "Synchronizing with Motor...",
                             color = Color.White,
