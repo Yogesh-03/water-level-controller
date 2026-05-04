@@ -28,7 +28,6 @@ class WaterRepositoryImpl @Inject constructor(
             .map {
                 Resource.Success(it.toPumpControl())
             }
-
     }
 
     override fun observeWaterLevels(): Flow<Resource<Sensor>> {

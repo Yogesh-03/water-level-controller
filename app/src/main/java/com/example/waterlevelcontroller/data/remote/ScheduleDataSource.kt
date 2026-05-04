@@ -6,7 +6,7 @@ import javax.inject.Inject
 class ScheduleDataSource @Inject constructor(
     private val firebase: FirebaseDataSource
 ){
-    suspend fun addSchedule(scheduleDto: ScheduleDto, userId : String, userName : String){
+    suspend fun addSchedule(scheduleDto: ScheduleDto){
         val id = firebase.generateId("schedules")
         firebase.setValue("schedules/$id", scheduleDto.copy(id = id))
     }

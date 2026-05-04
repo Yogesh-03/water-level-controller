@@ -22,7 +22,6 @@ import javax.inject.Inject
 class FirebaseDataSource @Inject constructor(
     private val db: DatabaseReference
 ) {
-
     fun observe(path: String): Flow<DataSnapshot> = callbackFlow {
 
         val ref = db.child(path)

@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.room.runtime.android)
     //implementation(libs.firebase.firestore.ktx)
     implementation("com.google.firebase:firebase-firestore-ktx")
+    //implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.firebase.firestore)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -111,6 +112,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
 
     //implementation("androidx.compose:compose-bom:2024.06.00")
+
+    // Hilt WorkManager
+    //implementation("androidx.hilt:hilt-work:1.1.0")
+    //kapt("androidx.hilt:hilt-compiler:1.1.0") // or ksp
+
+    // WorkManager (Kotlin + Coroutines)
+    //implementation("androidx.work:work-runtime-ktx:2.6.0")
 }
 
 

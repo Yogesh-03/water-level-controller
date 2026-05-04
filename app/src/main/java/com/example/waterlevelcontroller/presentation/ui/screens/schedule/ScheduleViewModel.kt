@@ -17,12 +17,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ScheduleViewModel @Inject constructor(
-    private val shceRepository: ScheduleRepository,
+    private val scheduleRepository: ScheduleRepository,
     networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _ScheduleState = MutableStateFlow<Resource<Schedule>>(Resource.Loading())
     val ScheduleState: StateFlow<Resource<Schedule>> = _ScheduleState.asStateFlow()
+
+    private val _addScheduleState = MutableStateFlow<Resource<Unit>>(Resource.Success(Unit))
+    val addScheduleState = _addScheduleState.asStateFlow()
 
     val isOnline = networkMonitor.isConnected
 
@@ -33,6 +36,12 @@ class ScheduleViewModel @Inject constructor(
     fun updateSchedule(data: Schedule) {
         viewModelScope.launch(Dispatchers.IO) {
 
+        }
+    }
+
+    fun addSchedule(schedule: Schedule){
+        viewModelScope.launch(Dispatchers.IO) {
+            scheduleRepository.addSchedule(schedule, "Yogesh", "Yogesh Yadav")
         }
     }
 }

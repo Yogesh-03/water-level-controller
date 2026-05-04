@@ -84,7 +84,9 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             repository.observePumpControl()
                 .onStart { _pumpControlState.value = Resource.Loading() }
-                .catch { e -> _pumpControlState.value = Resource.Error(e.message ?: "Connection Failed") }
+                .catch { e ->
+                    _pumpControlState.value = Resource.Error(e.message ?: "Connection Failed")
+                }
                 .collectLatest { resource -> _pumpControlState.value = resource }
         }
 
@@ -102,7 +104,7 @@ class DashboardViewModel @Inject constructor(
         syncTimeoutJob?.cancel()
 
         // Capture the value currently in the database before we change it
-        val rollbackValue: Any? = when(field) {
+        val rollbackValue: Any? = when (field) {
             PumpField.STATE -> lastValidState?.pumpState
             PumpField.MODE -> lastValidState?.mode
             PumpField.MANUAL_CONTROL -> lastValidState?.manualPump

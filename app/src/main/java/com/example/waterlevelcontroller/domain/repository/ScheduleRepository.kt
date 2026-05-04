@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface ScheduleRepository {
 
-    fun observeSchedule() : Flow<Resource<Schedule>>
-
-    suspend fun updateSchedule() : Resource<Unit>
-    suspend fun addSchedule(schedule: Schedule) : Resource<Unit>
+//    fun observeSchedule() : Flow<Resource<Schedule>>
+//
+//    suspend fun updateSchedule() : Resource<Unit>
+    suspend fun addSchedule(schedule: Schedule, userId : String, userName : String) : Resource<Unit>
 }
