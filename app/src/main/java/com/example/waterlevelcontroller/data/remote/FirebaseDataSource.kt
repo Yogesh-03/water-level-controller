@@ -50,7 +50,6 @@ class FirebaseDataSource @Inject constructor(
         }
     }
 
-
     fun generateId(path: String): String {
         return db.child(path).push().key ?: throw Exception("ID generation failed")
     }

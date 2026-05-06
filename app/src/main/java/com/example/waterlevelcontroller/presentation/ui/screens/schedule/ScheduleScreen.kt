@@ -159,6 +159,29 @@ fun ScheduleScreen(
                                     lastUpdated = System.currentTimeMillis()
                                 )
                             )
+                            viewModel.addSchedule(Schedule(
+                                id = "", // empty for new schedule (Firebase will generate)
+                                title = "Morning Water Fill",
+
+                                timeWindow = TimeWindow(
+                                    start = "08:00",
+                                    end = "09:30" // null if untilFull = true
+                                ),
+
+                                activeDays = listOf(1, 2, 3, 4, 5), // Mon–Fri (depends on your convention)
+
+                                settings = ScheduleSettings(
+                                    isEnabled = true,
+                                    untilFull = false
+                                ),
+
+                                syncStatus = SyncStatus.Pending,
+
+                                createdBy = "user_123",
+                                lastEditedBy = "user_123",
+                                lastEditedName = "Yogesh",
+                                lastUpdated = System.currentTimeMillis()
+                            ))
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
@@ -192,7 +215,7 @@ fun ScheduleScreen(
                                         isEnabled = !schedule.settings.isEnabled
                                     )
                                 )
-                                viewModel.addSchedule(schedule)
+
                             },
                             onDelete = {
                                 schedules.removeAt(index)

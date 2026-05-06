@@ -34,4 +34,9 @@ object FirebasePaths {
     const val PUMP_CONTROLS_PUMP_STATE_DESIRED = "pumpState/desired"
     const val PUMP_CONTROLS_PUMP_STATE_REPORTED = "pumpState/reported"
 
+
+    //**************** SCHEDULES PATH **********************
+
+    const val SCHEDULES = "schedules"
+
 }
