@@ -7,7 +7,7 @@ import com.example.waterlevelcontroller.domain.model.ScheduleSettings
 import com.example.waterlevelcontroller.domain.model.SyncStatus
 import com.example.waterlevelcontroller.domain.model.TimeWindow
 
-fun ScheduleDto.toDomain(): Schedule {
+fun ScheduleDto.toSchedule(): Schedule {
     // 1. Identify the 'active' data to show the user.
     // We prioritize 'desired' so the UI feels responsive (Optimistic UI).
     val activeData = desired ?: reported ?: ScheduleStateDto()

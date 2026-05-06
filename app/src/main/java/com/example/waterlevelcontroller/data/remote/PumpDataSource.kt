@@ -60,7 +60,4 @@ class PumpDataSource @Inject constructor(
     suspend fun <T> updateSingleField(path: String, value: T) {
         firebase.setValue(path, value)
     }
-
-
-
 }

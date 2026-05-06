@@ -11,4 +11,8 @@ interface ScheduleRepository {
 //
     suspend fun updateSchedule(scheduleId : String, userId: String, userName: String, scheduleDto: ScheduleDto ) : Resource<Unit>
     suspend fun addSchedule(schedule: Schedule, userId : String, userName : String) : Resource<Unit>
+
+    fun observeSchedule() : Flow<Resource<List<Schedule>>>
+
+    suspend fun deleteSchedule(scheduleId : String)
 }

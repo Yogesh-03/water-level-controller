@@ -37,7 +37,6 @@ class FirebaseDataSource @Inject constructor(
         }
 
         ref.addValueEventListener(listener)
-
         awaitClose { ref.removeEventListener(listener) }
     }
 
@@ -52,5 +51,14 @@ class FirebaseDataSource @Inject constructor(
 
     fun generateId(path: String): String {
         return db.child(path).push().key ?: throw Exception("ID generation failed")
+    }
+
+    suspend fun deletePath(path: String) {
+        try {
+            db.child(path).removeValue().await()
+        } catch (e: Exception) {
+            Log.e("FirebaseDataSource", "Delete failed at $path", e)
+            throw e
+        }
     }
 }

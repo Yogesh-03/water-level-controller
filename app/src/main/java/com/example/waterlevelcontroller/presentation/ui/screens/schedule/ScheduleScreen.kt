@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.domain.model.Schedule
 import com.example.waterlevelcontroller.domain.model.ScheduleSettings
 import com.example.waterlevelcontroller.domain.model.SyncStatus
@@ -45,60 +48,15 @@ import com.example.waterlevelcontroller.presentation.ui.theme.*
 fun ScheduleScreen(
     viewModel: ScheduleViewModel = hiltViewModel()
 ) {
-
-    val isOnline by viewModel.isOnline.collectAsState()
-
-    val schedules = remember {
-        mutableStateListOf(
-            Schedule(
-                id = "", // empty for new schedule (Firebase will generate)
-                title = "Morning Water Fill",
-
-                timeWindow = TimeWindow(
-                    start = "08:00",
-                    end = "09:30" // null if untilFull = true
-                ),
-
-                activeDays = listOf(1, 2, 3, 4, 5), // Mon–Fri (depends on your convention)
-
-                settings = ScheduleSettings(
-                    isEnabled = true,
-                    untilFull = false
-                ),
-
-                syncStatus = SyncStatus.Pending,
-
-                createdBy = "user_123",
-                lastEditedBy = "user_123",
-                lastEditedName = "Yogesh",
-                lastUpdated = System.currentTimeMillis()
-            ),
-            Schedule(
-                id = "", // empty for new schedule (Firebase will generate)
-                title = "Morning Water Fill",
-
-                timeWindow = TimeWindow(
-                    start = "08:00",
-                    end = "09:30" // null if untilFull = true
-                ),
-
-                activeDays = listOf(1, 2, 3, 4, 5), // Mon–Fri (depends on your convention)
-
-                settings = ScheduleSettings(
-                    isEnabled = true,
-                    untilFull = false
-                ),
-
-                syncStatus = SyncStatus.Pending,
-
-                createdBy = "user_123",
-                lastEditedBy = "user_123",
-                lastEditedName = "Yogesh",
-                lastUpdated = System.currentTimeMillis()
-            )
-        )
-    }
+    // 1. Observe state from ViewModel using lifecycle-aware collection
+    val isOnline by viewModel.isOnline.collectAsStateWithLifecycle()
+    val scheduleResource by viewModel.ScheduleState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // 2. Start observing Firebase data on launch
+    LaunchedEffect(Unit) {
+        viewModel.observeSchedule()
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -109,17 +67,13 @@ fun ScheduleScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // --- FIXED SECTION ---
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
+            // --- FIXED HEADER SECTION ---
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 TopBar("Pump Scheduler", isOnline)
                 Spacer(modifier = Modifier.height(16.dp))
                 NextScheduleCard()
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // HEADER ROW WITH ADD ICON
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -134,124 +88,93 @@ fun ScheduleScreen(
                     )
                     IconButton(
                         onClick = {
-                            schedules.add(
-                                Schedule(
-                                    id = "", // empty for new schedule (Firebase will generate)
-                                    title = "Morning Water Fill",
-
-                                    timeWindow = TimeWindow(
-                                        start = "08:00",
-                                        end = "09:30" // null if untilFull = true
-                                    ),
-
-                                    activeDays = listOf(1, 2, 3, 4, 5), // Mon–Fri (depends on your convention)
-
-                                    settings = ScheduleSettings(
-                                        isEnabled = true,
-                                        untilFull = false
-                                    ),
-
-                                    syncStatus = SyncStatus.Pending,
-
-                                    createdBy = "user_123",
-                                    lastEditedBy = "user_123",
-                                    lastEditedName = "Yogesh",
-                                    lastUpdated = System.currentTimeMillis()
-                                )
-                            )
-                            viewModel.addSchedule(Schedule(
-                                id = "", // empty for new schedule (Firebase will generate)
-                                title = "Morning Water Fill",
-
-                                timeWindow = TimeWindow(
-                                    start = "08:00",
-                                    end = "09:30" // null if untilFull = true
-                                ),
-
-                                activeDays = listOf(1, 2, 3, 4, 5), // Mon–Fri (depends on your convention)
-
-                                settings = ScheduleSettings(
-                                    isEnabled = true,
-                                    untilFull = false
-                                ),
-
-                                syncStatus = SyncStatus.Pending,
-
-                                createdBy = "user_123",
-                                lastEditedBy = "user_123",
-                                lastEditedName = "Yogesh",
-                                lastUpdated = System.currentTimeMillis()
-                            ))
+                            // 3. Add to Firebase via ViewModel
+                            viewModel.addSchedule(createDefaultSchedule())
                         },
                         modifier = Modifier.size(24.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Schedule",
-                            tint = ActiveBlue
-                        )
+                        Icon(Icons.Default.Add, "Add", tint = ActiveBlue)
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // --- SCROLLABLE SECTION ---
-            // ********** ACTIVE SCHEDULES **************
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(schedules.size) { index ->
-                    val schedule = schedules[index]
-                    key(schedule.id) {
-                        ScheduleCard(
-                            schedule = schedule,
-                            onToggle = {
-                                schedules[index] = schedule.copy(
-                                    settings = schedule.settings.copy(
-                                        isEnabled = !schedule.settings.isEnabled
-                                    )
-                                )
-
-                            },
-                            onDelete = {
-                                schedules.removeAt(index)
-                            }
-                        )
+            // --- DATA STATE HANDLING ---
+            // Handles Loading, Success, and Error states from the Repository
+            when (val resource = scheduleResource) {
+                is Resource.Loading -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = ActiveBlue)
                     }
                 }
-                item { Spacer(modifier = Modifier.height(30.dp)) }
+
+                is Resource.Success -> {
+                    val list = resource.data ?: emptyList()
+                    if (list.isEmpty()) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No schedules found.", color = TextSecondary)
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Use ID as key for efficient list updates
+                            items(items = list, key = { it.id }) { schedule ->
+                                ScheduleCard(
+                                    schedule = schedule,
+                                    onToggle = {
+                                        // 4. Update Firebase via ViewModel
+                                        viewModel.updateSchedule(
+                                            schedule.copy(
+                                                settings = schedule.settings.copy(
+                                                    isEnabled = !schedule.settings.isEnabled
+                                                )
+                                            )
+                                        )
+                                    },
+                                    // ADD THIS LOGIC:
+                                    onDayChanged = { updatedDays ->
+                                        viewModel.updateSchedule(
+                                            schedule.copy(activeDays = updatedDays)
+                                        )
+                                    },
+                                    onDelete = {
+                                        viewModel.deleteSchedule(schedule.id)
+                                    }
+                                )
+                            }
+                            item { Spacer(modifier = Modifier.height(30.dp)) }
+                        }
+                    }
+                }
+
+                is Resource.Error -> {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("Error: ${resource.message}", color = Color.Red)
+                    }
+                }
             }
         }
     }
 }
-
-fun Int.toDayName(): String = when (this) {
-    7 -> "Sun"
-    1 -> "Mon"
-    2 -> "Tue"
-    3 -> "Wed"
-    4 -> "Thu"
-    5 -> "Fri"
-    6 -> "Sat"
-    else -> ""
-}
-
 // -------------------- COMPONENTS --------------------
 
 @Composable
 fun ScheduleCard(
     schedule: Schedule,
     onToggle: () -> Unit,
+    onDayChanged: (List<Int>) -> Unit,
     onDelete: () -> Unit
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var startTime by remember { mutableStateOf(schedule.timeWindow.start) }
-    var endTime by remember { mutableStateOf(schedule.timeWindow.end) }
-    var untilFull by remember { mutableStateOf(false) }
+    var endTime by remember { mutableStateOf(schedule.timeWindow.end ?: "09:00") }
+    val untilFull = schedule.settings.untilFull
+
+    val dayMap = mapOf("Mo" to 1, "Tu" to 2, "We" to 3, "Th" to 4, "Fr" to 5, "Sa" to 6, "Su" to 7)
+    val revMap = dayMap.entries.associate { it.value to it.key }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -260,15 +183,6 @@ fun ScheduleCard(
         border = BorderStroke(0.5.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-
-
-            val selectedDays =
-                remember {
-                    mutableStateListOf<String>().apply {
-                        addAll(schedule.activeDays.map { it.toDayName() })
-                    }
-                }
-
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(schedule.title, color = TextSecondary, fontSize = 12.sp)
@@ -286,15 +200,19 @@ fun ScheduleCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             DaysRow(
-                activeDays = selectedDays,
-                onDayClick = { day ->
-                    if (selectedDays.contains(day)) selectedDays.remove(day) else selectedDays.add(
-                        day
-                    )
+                activeDays = schedule.activeDays.map { revMap[it] ?: "" },
+                onDayClick = { dayName ->
+                    val dayId = dayMap[dayName] ?: return@DaysRow
+                    val newDays = if (schedule.activeDays.contains(dayId)) {
+                        schedule.activeDays.filter { it != dayId }
+                    } else {
+                        (schedule.activeDays + dayId).sorted()
+                    }
+                    onDayChanged(newDays) // Sends the update to ViewModel
                 }
             )
 
-            // DELETE ICON BELOW DAYS
+// BOTTOM ROW: SYNC STATUS & DELETE ACTION
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -302,21 +220,38 @@ fun ScheduleCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Duration: ${schedule.timeWindow.start}",
-                    color = ActiveBlue,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                // Sync Status Indicator
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (schedule.syncStatus == SyncStatus.Synced) GreenDark
+                                else OrangeText
+                            )
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (schedule.syncStatus == SyncStatus.Synced) "Synced" else "Pending Sync",
+                        color = if (schedule.syncStatus == SyncStatus.Synced) GreenDark else OrangeText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
 
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.Red.copy(alpha = 0.6f),
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clickable { onDelete() }
-                )
+                // Delete Icon Button
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Schedule",
+                        tint = Color.Red.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -324,17 +259,16 @@ fun ScheduleCard(
     if (showDialog) {
         TimeRangeDialog(
             startTime = startTime,
-            endTime = endTime!!,
+            endTime = endTime,
             untilFull = untilFull,
             onStartTimeChange = { startTime = it },
             onEndTimeChange = { endTime = it },
-            onUntilFullChange = { untilFull = it },
+            onUntilFullChange = { /* Update via VM */ },
             onDismiss = { showDialog = false },
             onSave = { _, _, _ -> showDialog = false }
         )
     }
 }
-
 // -------------------- THE REST OF YOUR COMPONENTS (DayCircle, IOSToggle, etc.) --------------------
 // (Keep the rest of the code from the previous response for NextScheduleCard, DaysRow, DayCircle, IOSToggle, TimeRangeDialog, WheelTimeGroup, and VerticalWheelPicker)
 
@@ -649,3 +583,30 @@ fun VerticalWheelPicker(count: Int, currentValue: Int, onValueChange: (Int) -> U
         }
     }
 }
+
+
+// -------------------- HELPERS --------------------
+
+fun Int.toDayName(): String = when (this) {
+    7 -> "Su"
+    1 -> "Mo"
+    2 -> "Tu"
+    3 -> "We"
+    4 -> "Th"
+    5 -> "Fr"
+    6 -> "Sa"
+    else -> ""
+}
+
+private fun createDefaultSchedule() = Schedule(
+    id = "",
+    title = "New Schedule",
+    timeWindow = TimeWindow(start = "08:00", end = "09:30"),
+    activeDays = listOf(1, 2, 3, 4, 5),
+    settings = ScheduleSettings(isEnabled = true, untilFull = false),
+    syncStatus = SyncStatus.Pending,
+    createdBy = "user_123",
+    lastEditedBy = "user_123",
+    lastEditedName = "Yogesh",
+    lastUpdated = System.currentTimeMillis()
+)
