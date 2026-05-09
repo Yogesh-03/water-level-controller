@@ -38,7 +38,7 @@ class ScheduleViewModel @Inject constructor(
 
     fun updateSchedule(data: Schedule) {
         viewModelScope.launch(Dispatchers.IO) {
-
+          //  scheduleRepository.updateSchedule(data.id,)
         }
     }
 

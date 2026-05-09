@@ -90,7 +90,6 @@ fun DashboardScreen(
         Box(modifier = Modifier.fillMaxSize()) {
 
 
-
             // 🔥 MAIN UI
             Column(
                 modifier = Modifier
@@ -175,13 +174,15 @@ fun DashboardScreen(
                                 onToggle = {
                                     val currentState = p?.pumpState ?: false
                                     viewModel.togglePump(!currentState)
-                                    when(updateState){
-                                        is Resource.Error<*> ->{
+                                    when (updateState) {
+                                        is Resource.Error<*> -> {
 
                                         }
+
                                         is Resource.Loading<*> -> {
                                             //Toast.makeText(context, "Synchronizing with hardware...", Toast.LENGTH_SHORT).show()
                                         }
+
                                         is Resource.Success<*> -> {
                                             //Toast.makeText(context, "Successfull", Toast.LENGTH_SHORT).show()
                                         }
@@ -199,6 +200,12 @@ fun DashboardScreen(
                                         if (p?.mode == "auto") "manual" else "auto"
                                     viewModel.updateMode(nextMode)
                                 }
+                            )
+
+                            Spacer(Modifier.height(12.dp))
+                            SensorRowCard(
+                                temperature = "54\u00B0C",  // replace with real data
+                                humidity = "65%"        // replace with real data
                             )
                         }
                     }
@@ -383,7 +390,7 @@ fun PumpCard(
     Card(
         modifier = Modifier
             .fillMaxWidth(),
-            // Visual cue: Card looks slightly "disabled" while loading
+        // Visual cue: Card looks slightly "disabled" while loading
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
         border = BorderStroke(0.5.dp, CardBorder),
@@ -418,7 +425,7 @@ fun PumpCard(
                             color = TextPrimary
                         )
                         Text(
-                             if (isOn) "Running" else "Stopped",
+                            if (isOn) "Running" else "Stopped",
                             fontSize = 11.sp,
                             color = if (isOn) GreenDark else TextSecondary
                         )
@@ -596,6 +603,164 @@ fun ErrorCard(message: String) {
             modifier = Modifier.padding(14.dp),
             fontSize = 13.sp,
             color = OrangeText
+        )
+    }
+}
+
+// ─── Sensor Row ───────────────────────────────────────────────
+@Composable
+fun SensorRowCard(temperature: String, humidity: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        EnvironmentCard(
+            icon = { ThermometerIcon() },
+            label = "Temperature",
+            value = temperature,
+            valueColor = OrangeText,
+            bgColor = OrangeBg,
+            modifier = Modifier.weight(1f)
+        )
+        EnvironmentCard(
+            icon = { HumidityIcon() },
+            label = "Humidity",
+            value = humidity,
+            valueColor = ActiveBlue,
+            bgColor = Color(0xFFE3F2FD),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun EnvironmentCard(
+    icon: @Composable () -> Unit,
+    label: String,
+    value: String,
+    valueColor: Color,
+    bgColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardBg),
+        border = BorderStroke(0.5.dp, CardBorder),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+            // ✅ Icon + Value in same row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(bgColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    icon()
+                }
+
+                Text(
+                    value,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = valueColor
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ✅ Label centered below
+            Text(
+                label,
+                fontSize = 11.sp,
+                color = TextSecondary,
+                letterSpacing = 0.4.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ─── Thermometer Icon ─────────────────────────────────────────
+@Composable
+fun ThermometerIcon() {
+    Canvas(modifier = Modifier.size(20.dp)) {
+        val cx = size.width / 2f
+        val strokeWidth = 1.5.dp.toPx()
+        val color = OrangeText
+
+        // Bulb at bottom
+        drawCircle(
+            color = color,
+            radius = 4.dp.toPx(),
+            center = androidx.compose.ui.geometry.Offset(cx, size.height - 4.dp.toPx())
+        )
+
+        // Tube
+        drawRoundRect(
+            color = color,
+            topLeft = androidx.compose.ui.geometry.Offset(cx - 2.dp.toPx(), 0f),
+            size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height - 4.dp.toPx()),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
+            style = Stroke(width = strokeWidth)
+        )
+
+        // Fill inside tube
+        drawRoundRect(
+            color = color.copy(alpha = 0.5f),
+            topLeft = androidx.compose.ui.geometry.Offset(cx - 1.dp.toPx(), size.height * 0.4f),
+            size = androidx.compose.ui.geometry.Size(2.dp.toPx(), size.height * 0.45f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx())
+        )
+    }
+}
+
+// ─── Humidity Icon ────────────────────────────────────────────
+@Composable
+fun HumidityIcon() {
+    Canvas(modifier = Modifier.size(20.dp)) {
+        val cx = size.width / 2f
+        val color = ActiveBlue
+        val strokeWidth = 1.5.dp.toPx()
+
+        // Droplet path
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(cx, 1.dp.toPx())
+            cubicTo(
+                cx + 6.dp.toPx(), 6.dp.toPx(),
+                cx + 8.dp.toPx(), 11.dp.toPx(),
+                cx + 8.dp.toPx(), 13.dp.toPx()
+            )
+            cubicTo(
+                cx + 8.dp.toPx(), 17.dp.toPx(),
+                cx - 8.dp.toPx(), 17.dp.toPx(),
+                cx - 8.dp.toPx(), 13.dp.toPx()
+            )
+            cubicTo(
+                cx - 8.dp.toPx(), 11.dp.toPx(),
+                cx - 6.dp.toPx(), 6.dp.toPx(),
+                cx, 1.dp.toPx()
+            )
+            close()
+        }
+
+        drawPath(path = path, color = color.copy(alpha = 0.2f))
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
         )
     }
 }
