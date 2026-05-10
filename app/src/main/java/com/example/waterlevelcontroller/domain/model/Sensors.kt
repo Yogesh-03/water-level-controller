@@ -5,5 +5,7 @@
         val overheadHigh: Boolean,
         val overheadLow: Boolean,
         val undergroundHigh: Boolean,
-        val undergroundLow: Boolean
+        val undergroundLow: Boolean,
+        val temperature: Float,
+        val humidity : Float
     )

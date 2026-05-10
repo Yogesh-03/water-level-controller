@@ -15,9 +15,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.modifier.modifierLocalOf
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
@@ -27,6 +25,9 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.waterlevelcontroller.core.utils.Resource
+import com.example.waterlevelcontroller.presentation.ui.components.common.HumidityIcon
+import com.example.waterlevelcontroller.presentation.ui.components.common.PumpIcon
+import com.example.waterlevelcontroller.presentation.ui.components.common.ThermometerIcon
 import com.example.waterlevelcontroller.presentation.ui.components.common.TopBar
 import com.example.waterlevelcontroller.presentation.ui.theme.ActiveBlue
 import com.example.waterlevelcontroller.presentation.ui.theme.BlueFill
@@ -204,8 +205,8 @@ fun DashboardScreen(
 
                             Spacer(Modifier.height(12.dp))
                             SensorRowCard(
-                                temperature = "54\u00B0C",  // replace with real data
-                                humidity = "65%"        // replace with real data
+                                temperature = "${(waterLevelState as Resource.Success).data?.temperature}\u00B0C",  // replace with real data
+                                humidity = "${(waterLevelState as Resource.Success).data?.humidity}%"        // replace with real data
                             )
                         }
                     }
@@ -464,30 +465,6 @@ fun PumpCard(
     }
 }
 
-@Composable
-fun PumpIcon(isOn: Boolean) {
-    val color = if (isOn) GreenDark else TextSecondary
-    Canvas(modifier = Modifier.size(22.dp)) {
-        val cx = size.width / 2
-        val cy = size.height / 2
-        val r = 7.dp.toPx()
-        drawCircle(color = color, radius = r, style = Stroke(width = 1.5.dp.toPx()))
-        drawLine(
-            color = color,
-            start = androidx.compose.ui.geometry.Offset(cx, cy - r * 0.6f),
-            end = androidx.compose.ui.geometry.Offset(cx, cy),
-            strokeWidth = 1.5.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-        drawLine(
-            color = color,
-            start = androidx.compose.ui.geometry.Offset(cx, cy),
-            end = androidx.compose.ui.geometry.Offset(cx + r * 0.5f, cy + r * 0.3f),
-            strokeWidth = 1.5.dp.toPx(),
-            cap = StrokeCap.Round
-        )
-    }
-}
 
 @Composable
 fun IOSToggle(
@@ -693,77 +670,7 @@ fun EnvironmentCard(
     }
 }
 
-// ─── Thermometer Icon ─────────────────────────────────────────
-@Composable
-fun ThermometerIcon() {
-    Canvas(modifier = Modifier.size(20.dp)) {
-        val cx = size.width / 2f
-        val strokeWidth = 1.5.dp.toPx()
-        val color = OrangeText
 
-        // Bulb at bottom
-        drawCircle(
-            color = color,
-            radius = 4.dp.toPx(),
-            center = androidx.compose.ui.geometry.Offset(cx, size.height - 4.dp.toPx())
-        )
-
-        // Tube
-        drawRoundRect(
-            color = color,
-            topLeft = androidx.compose.ui.geometry.Offset(cx - 2.dp.toPx(), 0f),
-            size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height - 4.dp.toPx()),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
-            style = Stroke(width = strokeWidth)
-        )
-
-        // Fill inside tube
-        drawRoundRect(
-            color = color.copy(alpha = 0.5f),
-            topLeft = androidx.compose.ui.geometry.Offset(cx - 1.dp.toPx(), size.height * 0.4f),
-            size = androidx.compose.ui.geometry.Size(2.dp.toPx(), size.height * 0.45f),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx())
-        )
-    }
-}
-
-// ─── Humidity Icon ────────────────────────────────────────────
-@Composable
-fun HumidityIcon() {
-    Canvas(modifier = Modifier.size(20.dp)) {
-        val cx = size.width / 2f
-        val color = ActiveBlue
-        val strokeWidth = 1.5.dp.toPx()
-
-        // Droplet path
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(cx, 1.dp.toPx())
-            cubicTo(
-                cx + 6.dp.toPx(), 6.dp.toPx(),
-                cx + 8.dp.toPx(), 11.dp.toPx(),
-                cx + 8.dp.toPx(), 13.dp.toPx()
-            )
-            cubicTo(
-                cx + 8.dp.toPx(), 17.dp.toPx(),
-                cx - 8.dp.toPx(), 17.dp.toPx(),
-                cx - 8.dp.toPx(), 13.dp.toPx()
-            )
-            cubicTo(
-                cx - 8.dp.toPx(), 11.dp.toPx(),
-                cx - 6.dp.toPx(), 6.dp.toPx(),
-                cx, 1.dp.toPx()
-            )
-            close()
-        }
-
-        drawPath(path = path, color = color.copy(alpha = 0.2f))
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-        )
-    }
-}
 
 
 

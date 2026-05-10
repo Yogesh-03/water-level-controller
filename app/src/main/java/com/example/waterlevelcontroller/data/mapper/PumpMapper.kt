@@ -20,7 +20,9 @@ fun SensorDto.toSensors(): Sensor {
         overheadHigh = overheadHigh ?: false,
         overheadLow = overheadLow ?: false,
         undergroundHigh = undergroundHigh ?: false,
-        undergroundLow = undergroundLow ?: false
+        undergroundLow = undergroundLow ?: false,
+        temperature = temperature ?: 0.0f,
+        humidity = humidity ?: 0.0f
     )
 }
 
