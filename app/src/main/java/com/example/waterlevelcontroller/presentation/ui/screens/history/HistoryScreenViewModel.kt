@@ -29,6 +29,10 @@ class HistoryScreenViewModel @Inject constructor(
     private val _logsState = MutableStateFlow<Resource<List<PumpLogs>>>(Resource.Loading())
     val logsState: StateFlow<Resource<List<PumpLogs>>> = _logsState.asStateFlow()
 
+    init {
+        getPumpLogs()
+    }
+
      fun getPumpLogs(){
         viewModelScope.launch {
             logsRepository.getPumpLogs()
@@ -39,6 +43,19 @@ class HistoryScreenViewModel @Inject constructor(
                     _logsState.value = resource
                     Log.d("LOGS", resource.data.toString())
                 }
+        }
+    }
+
+    fun generateFakeYearlyData(): List<Pair<Double, Double>> {
+        val random = java.util.Random()
+        return (1..365).map { day ->
+            // Most days have 10-40 mins of runtime, some days have spikes up to 200 mins
+            val baseRuntime = if (random.nextFloat() > 0.95) {
+                random.nextInt(150) + 50 // Spike day
+            } else {
+                random.nextInt(30) + 10 // Normal day
+            }
+            Pair(day.toDouble(), baseRuntime.toDouble())
         }
     }
 

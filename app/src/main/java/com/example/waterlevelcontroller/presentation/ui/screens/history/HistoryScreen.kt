@@ -1,23 +1,30 @@
 package com.example.waterlevelcontroller.presentation.ui.screens.history
 
-
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.remote.creation.second
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.waterlevelcontroller.core.utils.Lttb
+import com.example.waterlevelcontroller.core.utils.Resource
+import com.example.waterlevelcontroller.domain.model.PumpLogs
+import com.example.waterlevelcontroller.presentation.ui.components.common.LogModeIcon
+import java.text.SimpleDateFormat
+import java.util.*
 
 // ─── Colors ───────────────────────────────────────────────────
 private val ScreenBg = Color(0xFFF5F5F7)
@@ -35,7 +42,7 @@ private val BlueFill = Color(0xFF378ADD)
 private val BlueFillLight = Color(0xFFB5D4F4)
 private val ActiveBlue = Color(0xFF007AFF)
 
-// ─── Data Models ──────────────────────────────────────────────
+// ─── UI Models ──────────────────────────────────────────────
 enum class PumpMode { AUTO, MANUAL, SCHEDULED }
 
 data class PumpLog(
@@ -58,130 +65,159 @@ data class DayLog(
 fun HistoryScreen(
     viewModel: HistoryScreenViewModel = hiltViewModel()
 ) {
-
-    val logsState = viewModel.logsState.collectAsState()
-    viewModel.getPumpLogs()
+    val resourceState by viewModel.logsState.collectAsState()
 
     val filters = listOf("Today", "This week", "This month", "All time")
-    var selectedFilter by remember { mutableStateOf(1) }
+    var selectedFilter by remember { mutableStateOf(3) }
 
-    // Sample data — replace with Firebase data
-    val weekData = listOf(30, 55, 40, 80, 60, 20, 100)
-    val weekDays = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su")
-    val todayIndex = 6
-
-    val dayLogs = listOf(
-        DayLog(
-            dayLabel = "Today — Sun 23 Apr",
-            totalRuns = 3,
-            totalDuration = "1h 45m",
-            logs = listOf(
-                PumpLog("06:00", "07:00", "1h 00m", "~600 L", PumpMode.SCHEDULED),
-                PumpLog("11:30", "12:00", "30m", "~300 L", PumpMode.MANUAL),
-                PumpLog("15:15", "15:30", "15m", "~150 L", PumpMode.AUTO)
-            )
-        ),
-        DayLog(
-            dayLabel = "Sat 22 Apr",
-            totalRuns = 2,
-            totalDuration = "45m",
-            logs = listOf(
-                PumpLog("06:00", "06:30", "30m", "~300 L", PumpMode.SCHEDULED),
-                PumpLog("18:45", "19:00", "15m", "~150 L", PumpMode.AUTO)
-            )
-        ),
-        DayLog(
-            dayLabel = "Fri 21 Apr",
-            totalRuns = 3,
-            totalDuration = "2h 10m",
-            logs = listOf(
-                PumpLog("06:00", "07:00", "1h 00m", "~600 L", PumpMode.SCHEDULED),
-                PumpLog("12:00", "12:40", "40m", "~400 L", PumpMode.MANUAL),
-                PumpLog("20:00", "20:30", "30m", "~300 L", PumpMode.AUTO)
-            )
-        )
-    )
+    // Transform Firestore Domain data into UI-friendly DayLog groups
+    val dayLogs = remember(resourceState) {
+        if (resourceState is Resource.Success) {
+            transformFirestoreToUi((resourceState as Resource.Success).data ?: emptyList())
+        } else emptyList()
+    }
 
     Scaffold(containerColor = ScreenBg) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            // Top Bar
-            item {
-                HistoryTopBar(
-                    filters = filters,
-                    selectedFilter = selectedFilter,
-                    onFilterClick = { selectedFilter = (selectedFilter + 1) % filters.size }
-                )
-                Spacer(Modifier.height(16.dp))
-            }
-
-            // Stats Row
-            item {
-                StatsRow()
-                Spacer(Modifier.height(14.dp))
-            }
-
-            // Bar Chart
-            item {
-                BarChartCard(
-                    values = weekData,
-                    labels = weekDays,
-                    todayIndex = todayIndex
-                )
-                Spacer(Modifier.height(14.dp))
-            }
-
-            // Section Label
-            item {
-                Text(
-                    "LOG",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextSecondary,
-                    letterSpacing = 0.6.sp
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-
-            // Day Groups
-            dayLogs.forEach { dayLog ->
-                item {
-                    DayGroupHeader(dayLog)
-                    Spacer(Modifier.height(6.dp))
+        when (val state = resourceState) {
+            is Resource.Loading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = ActiveBlue)
                 }
-                items(dayLog.logs) { log ->
-                    LogCard(log)
-                    Spacer(Modifier.height(6.dp))
+            }
+
+            is Resource.Error -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Error: ${state.message}", color = Color.Red)
                 }
-                item { Spacer(Modifier.height(8.dp)) }
+            }
+
+            is Resource.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    item {
+                        val fakeData = remember { generateFakeYearlyData() }
+
+                        Text(
+                            "YEARLY TREND (LTTB DOWNSAMPLED)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+
+                        YearlyRuntimeChart(rawData = fakeData)
+
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    item {
+                        StatsRow()
+                        Spacer(Modifier.height(14.dp))
+                    }
+
+                    item {
+                        BarChartCard(
+                            values = listOf(30, 55, 40, 80, 60, 20, 100),
+                            labels = listOf("Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"),
+                            todayIndex = 6
+                        )
+                        Spacer(Modifier.height(14.dp))
+                    }
+
+                    item {
+                        Text(
+                            "LOG",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary,
+                            letterSpacing = 0.6.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    if (dayLogs.isEmpty()) {
+                        item {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No logs found", color = TextSecondary)
+                            }
+                        }
+                    }
+
+                    dayLogs.forEach { dayLog ->
+                        item {
+                            DayGroupHeader(dayLog)
+                            Spacer(Modifier.height(6.dp))
+                        }
+                        items(dayLog.logs) { log ->
+                            LogCard(log)
+                            Spacer(Modifier.height(6.dp))
+                        }
+                        item { Spacer(Modifier.height(12.dp)) }
+                    }
+                }
             }
         }
     }
 }
 
-// ─── Top Bar ──────────────────────────────────────────────────
+/**
+ * Transformation logic: Converts raw Domain PumpLogs into grouped UI Models
+ */
+private fun transformFirestoreToUi(domainLogs: List<PumpLogs>): List<DayLog> {
+    val dateSdf = SimpleDateFormat("EEE dd MMM", Locale.getDefault())
+    val timeSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    return domainLogs.groupBy { log ->
+        // Changed to .start_timestamp
+        dateSdf.format(Date(log.start_timestamp * 1000))
+    }.map { (date, logsInDay) ->
+        // Changed to .end_timestamp and .start_timestamp
+        val totalSecs = logsInDay.sumOf { it.end_timestamp - it.start_timestamp }
+
+        DayLog(
+            dayLabel = date,
+            totalRuns = logsInDay.size,
+            totalDuration = "${totalSecs / 60}m",
+            logs = logsInDay.map { item ->
+                PumpLog(
+                    // Changed to .start_timestamp
+                    startTime = timeSdf.format(Date(item.start_timestamp * 1000)),
+                    // Changed to .end_timestamp
+                    endTime = timeSdf.format(Date(item.end_timestamp * 1000)),
+                    // Math using the correct names
+                    duration = "${(item.end_timestamp - item.start_timestamp) / 60}m",
+                    liters = "~${item.consumption_liters.toInt()} L",
+                    mode = when {
+                        item.stop_reason.contains("AUTO", true) -> PumpMode.AUTO
+                        item.stop_reason.contains("SCHEDULED", true) -> PumpMode.SCHEDULED
+                        else -> PumpMode.MANUAL
+                    }
+                )
+            }
+        )
+    }
+}
+
+// ─── UI Components ───────────────────────────────────────────
+
 @Composable
-fun HistoryTopBar(
-    filters: List<String>,
-    selectedFilter: Int,
-    onFilterClick: () -> Unit
-) {
+fun HistoryTopBar(filters: List<String>, selectedFilter: Int, onFilterClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "Pump History",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary
-        )
+        Text("Pump History", fontSize = 18.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
@@ -194,25 +230,6 @@ fun HistoryTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Canvas(modifier = Modifier.size(12.dp)) {
-                    val strokePx = 1.5.dp.toPx()
-                    listOf(
-                        Pair(2.dp.toPx(), size.width - 2.dp.toPx()),
-                        Pair(4.dp.toPx(), size.width - 4.dp.toPx()),
-                        Pair(6.dp.toPx(), size.width - 6.dp.toPx())
-                    ).forEachIndexed { i, (start, end) ->
-                        drawLine(
-                            color = ActiveBlue,
-                            start = androidx.compose.ui.geometry.Offset(
-                                start,
-                                (i * 4 + 2).dp.toPx()
-                            ),
-                            end = androidx.compose.ui.geometry.Offset(end, (i * 4 + 2).dp.toPx()),
-                            strokeWidth = strokePx,
-                            cap = StrokeCap.Round
-                        )
-                    }
-                }
                 Text(
                     filters[selectedFilter],
                     fontSize = 11.sp,
@@ -224,47 +241,24 @@ fun HistoryTopBar(
     }
 }
 
-// ─── Stats Row ────────────────────────────────────────────────
 @Composable
 fun StatsRow() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        StatCard(
-            label = "Today runtime",
-            value = "1h 45m",
-            sub = "3 cycles today",
-            valueColor = GreenDark,
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            label = "Week total",
-            value = "8h 20m",
-            sub = "avg 1h 11m/day",
-            valueColor = TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-    }
-    Spacer(Modifier.height(8.dp))
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        StatCard(
-            label = "Longest run",
-            value = "2h 10m",
-            sub = "Mon 23 Apr",
-            valueColor = OrangeText,
-            modifier = Modifier.weight(1f)
-        )
-        StatCard(
-            label = "Pump cycles",
-            value = "18",
-            sub = "this week",
-            valueColor = TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StatCard("Today runtime", "1h 45m", "3 cycles today", GreenDark, Modifier.weight(1f))
+            StatCard("Week total", "8h 20m", "avg 1h 11m/day", TextPrimary, Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StatCard("Longest run", "2h 10m", "Mon 23 Apr", OrangeText, Modifier.weight(1f))
+            StatCard("Pump cycles", "18", "this week", TextPrimary, Modifier.weight(1f))
+        }
     }
 }
 
@@ -280,45 +274,28 @@ fun StatCard(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
-        border = BorderStroke(0.5.dp, CardBorder),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(0.5.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                label.uppercase(),
-                fontSize = 10.sp,
-                color = TextSecondary,
-                letterSpacing = 0.4.sp
-            )
-            Spacer(Modifier.height(4.dp))
+            Text(label.uppercase(), fontSize = 10.sp, color = TextSecondary, letterSpacing = 0.4.sp)
             Text(value, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = valueColor)
-            Spacer(Modifier.height(2.dp))
             Text(sub, fontSize = 10.sp, color = TextSecondary)
         }
     }
 }
 
-// ─── Bar Chart ────────────────────────────────────────────────
 @Composable
 fun BarChartCard(values: List<Int>, labels: List<String>, todayIndex: Int) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
-        border = BorderStroke(0.5.dp, CardBorder),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(0.5.dp, CardBorder)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                "DAILY RUNTIME (MINUTES)",
-                fontSize = 10.sp,
-                color = TextSecondary,
-                letterSpacing = 0.4.sp
-            )
+            Text("DAILY RUNTIME (MINUTES)", fontSize = 10.sp, color = TextSecondary)
             Spacer(Modifier.height(12.dp))
-
-            val maxVal = values.max().toFloat()
-
+            val maxVal = values.maxOrNull()?.toFloat() ?: 1f
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -327,27 +304,22 @@ fun BarChartCard(values: List<Int>, labels: List<String>, todayIndex: Int) {
                 verticalAlignment = Alignment.Bottom
             ) {
                 values.forEachIndexed { i, value ->
-                    val fraction = value / maxVal
                     val isToday = i == todayIndex
-
                     Column(
                         modifier = Modifier.weight(1f),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Bottom
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .fillMaxHeight(fraction)
+                                .fillMaxHeight(value / maxVal)
                                 .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
                                 .background(if (isToday) BlueFill else BlueFillLight)
                         )
-                        Spacer(Modifier.height(4.dp))
                         Text(
                             labels[i],
                             fontSize = 9.sp,
-                            color = if (isToday) ActiveBlue else TextSecondary,
-                            fontWeight = if (isToday) FontWeight.Medium else FontWeight.Normal
+                            color = if (isToday) ActiveBlue else TextSecondary
                         )
                     }
                 }
@@ -356,14 +328,9 @@ fun BarChartCard(values: List<Int>, labels: List<String>, todayIndex: Int) {
     }
 }
 
-// ─── Day Group ────────────────────────────────────────────────
 @Composable
 fun DayGroupHeader(dayLog: DayLog) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(dayLog.dayLabel, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
         Text(
             "${dayLog.totalRuns} runs · ${dayLog.totalDuration}",
@@ -373,7 +340,6 @@ fun DayGroupHeader(dayLog: DayLog) {
     }
 }
 
-// ─── Add this data class ───────────────────────────────────────
 private data class LogCardStyle(
     val iconBg: Color,
     val iconColor: Color,
@@ -382,43 +348,22 @@ private data class LogCardStyle(
     val pillLabel: String
 )
 
-
-// ─── Log Card ─────────────────────────────────────────────────
 @Composable
 fun LogCard(log: PumpLog) {
     val style = when (log.mode) {
-        PumpMode.AUTO -> LogCardStyle(
-            iconBg = GreenLight,
-            iconColor = GreenDark,
-            pillBg = GreenLight,
-            pillText = GreenDark,
-            pillLabel = "Auto"
-        )
-        PumpMode.MANUAL -> LogCardStyle(
-            iconBg = BlueBg,
-            iconColor = BlueText,
-            pillBg = BlueBg,
-            pillText = BlueText,
-            pillLabel = "Manual"
-        )
-        PumpMode.SCHEDULED -> LogCardStyle(
-            iconBg = OrangeBg,
-            iconColor = OrangeText,
-            pillBg = OrangeBg,
-            pillText = OrangeText,
-            pillLabel = "Scheduled"
-        )
+        PumpMode.AUTO -> LogCardStyle(GreenLight, GreenDark, GreenLight, GreenDark, "Auto")
+        PumpMode.MANUAL -> LogCardStyle(BlueBg, BlueText, BlueBg, BlueText, "Manual")
+        PumpMode.SCHEDULED -> LogCardStyle(OrangeBg, OrangeText, OrangeBg, OrangeText, "Scheduled")
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = CardBg),
-        border = BorderStroke(0.5.dp, CardBorder),
-        elevation = CardDefaults.cardElevation(0.dp)
+        border = BorderStroke(0.5.dp, CardBorder)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp, 12.dp, 14.dp, 12.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -426,12 +371,10 @@ fun LogCard(log: PumpLog) {
                 modifier = Modifier
                     .size(36.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(style.iconBg),
-                contentAlignment = Alignment.Center
+                    .background(style.iconBg), contentAlignment = Alignment.Center
             ) {
                 LogModeIcon(log.mode, style.iconColor)
             }
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     "${log.startTime} – ${log.endTime}",
@@ -439,76 +382,105 @@ fun LogCard(log: PumpLog) {
                     fontWeight = FontWeight.Medium,
                     color = TextPrimary
                 )
-                Spacer(Modifier.height(3.dp))
-                ModePill(
-                    label = style.pillLabel,
-                    bg = style.pillBg,
-                    textColor = style.pillText
-                )
+                ModePill(style.pillLabel, style.pillBg, style.pillText)
             }
-
             Column(horizontalAlignment = Alignment.End) {
-                Text(log.duration, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                Text(
+                    log.duration,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary
+                )
                 Text(log.liters, fontSize = 10.sp, color = TextSecondary)
             }
         }
     }
 }
 
-@Composable
-fun LogModeIcon(mode: PumpMode, color: Color) {
-    Canvas(modifier = Modifier.size(18.dp)) {
-        val cx = size.width / 2
-        val cy = size.height / 2
-        val r = 6.dp.toPx()
-        drawCircle(color = color, radius = r, style = Stroke(width = 1.5.dp.toPx()))
-        when (mode) {
-            PumpMode.AUTO -> {
-                // Checkmark
-                drawLine(
-                    color,
-                    androidx.compose.ui.geometry.Offset(cx - r * 0.5f, cy),
-                    androidx.compose.ui.geometry.Offset(cx - r * 0.1f, cy + r * 0.4f),
-                    1.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color,
-                    androidx.compose.ui.geometry.Offset(cx - r * 0.1f, cy + r * 0.4f),
-                    androidx.compose.ui.geometry.Offset(cx + r * 0.5f, cy - r * 0.4f),
-                    1.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-            }
 
-            else -> {
-                // Clock hands
-                drawLine(
-                    color,
-                    androidx.compose.ui.geometry.Offset(cx, cy - r * 0.6f),
-                    androidx.compose.ui.geometry.Offset(cx, cy),
-                    1.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-                drawLine(
-                    color,
-                    androidx.compose.ui.geometry.Offset(cx, cy),
-                    androidx.compose.ui.geometry.Offset(cx + r * 0.5f, cy + r * 0.3f),
-                    1.5.dp.toPx(),
-                    cap = StrokeCap.Round
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun ModePill(label: String, bg: Color, textColor: Color) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
+            .background(bg)
             .padding(horizontal = 7.dp, vertical = 2.dp)
     ) {
         Text(label, fontSize = 9.sp, fontWeight = FontWeight.Medium, color = textColor)
+    }
+}
+
+fun generateFakeYearlyData(): List<Pair<Double, Double>> {
+    val random = java.util.Random()
+    return (1..365).map { day ->
+        // Most days have 10-40 mins of runtime, some days have spikes up to 200 mins
+        val baseRuntime = if (random.nextFloat() > 0.95) {
+            random.nextInt(150) + 50 // Spike day
+        } else {
+            random.nextInt(30) + 10 // Normal day
+        }
+        Pair(day.toDouble(), baseRuntime.toDouble())
+    }
+}
+
+@Composable
+fun YearlyRuntimeChart(
+    rawData: List<Pair<Double, Double>>,
+    modifier: Modifier = Modifier
+) {
+    // 1. Downsample from 365 to 60 points using LTTB
+    val chartData = remember(rawData) { Lttb.calculate(rawData, 60) }
+
+    val maxRuntime = chartData.maxOfOrNull { it.second }?.toFloat() ?: 100f
+    val maxX = 365f
+
+    Card(
+        modifier = modifier.fillMaxWidth().height(200.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(0.5.dp, Color(0xFFE5E5EA))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("ANNUAL MOTOR RUNTIME (MINS)", fontSize = 10.sp, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val width = size.width
+                val height = size.height
+
+                val path = androidx.compose.ui.graphics.Path()
+
+                chartData.forEachIndexed { index, point ->
+                    // Map data to canvas coordinates
+                    val x = (point.first.toFloat() / maxX) * width
+                    val y = height - (point.second.toFloat() / maxRuntime) * height
+
+                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+
+                // Draw the line
+                drawPath(
+                    path = path,
+                    color = Color(0xFF007AFF),
+                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+                )
+
+                // Optional: Draw a subtle gradient fill under the line
+                val fillPath = androidx.compose.ui.graphics.Path().apply {
+                    addPath(path)
+                    lineTo(width, height)
+                    lineTo(0f, height)
+                    close()
+                }
+                drawPath(
+                    path = fillPath,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(Color(0xFF007AFF).copy(alpha = 0.2f), Color.Transparent)
+                    )
+                )
+            }
+        }
     }
 }
