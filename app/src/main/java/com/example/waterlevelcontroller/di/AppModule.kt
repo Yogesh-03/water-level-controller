@@ -9,8 +9,11 @@ import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
 import com.example.waterlevelcontroller.domain.repository.ScheduleRepository
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
+import com.google.firebase.Firebase
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,6 +29,12 @@ object AppModule {
     @Singleton
     fun provideDatabase(): DatabaseReference =
         FirebaseDatabase.getInstance().reference
+
+
+    @Provides
+    @Singleton
+    fun provideFirestore() : FirebaseFirestore =
+        Firebase.firestore
 
     @Provides
     @Singleton
