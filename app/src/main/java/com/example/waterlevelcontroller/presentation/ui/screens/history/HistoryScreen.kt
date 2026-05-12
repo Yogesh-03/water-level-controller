@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 
 // ─── Colors ───────────────────────────────────────────────────
 private val ScreenBg = Color(0xFFF5F5F7)
@@ -54,7 +55,12 @@ data class DayLog(
 
 // ─── Main Screen ──────────────────────────────────────────────
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(
+    viewModel: HistoryScreenViewModel = hiltViewModel()
+) {
+
+    val logsState = viewModel.logsState.collectAsState()
+    viewModel.getPumpLogs()
 
     val filters = listOf("Today", "This week", "This month", "All time")
     var selectedFilter by remember { mutableStateOf(1) }

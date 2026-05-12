@@ -3,10 +3,13 @@ package com.example.waterlevelcontroller.di
 import android.content.Context
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
+import com.example.waterlevelcontroller.data.remote.LogsDataSource
 import com.example.waterlevelcontroller.data.remote.PumpDataSource
 import com.example.waterlevelcontroller.data.remote.ScheduleDataSource
+import com.example.waterlevelcontroller.data.repository.LogsRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.ScheduleRepositoryImpl
 import com.example.waterlevelcontroller.data.repository.WaterRepositoryImpl
+import com.example.waterlevelcontroller.domain.repository.LogsRepository
 import com.example.waterlevelcontroller.domain.repository.ScheduleRepository
 import com.example.waterlevelcontroller.domain.repository.WaterRepository
 import com.google.firebase.Firebase
@@ -25,49 +28,43 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
+    // 1. Correct Realtime Database Provider
     @Provides
     @Singleton
     fun provideDatabase(): DatabaseReference =
         FirebaseDatabase.getInstance().reference
 
-
+    // 2. Correct Firestore Provider (Removed the parameter to stop recursion)
     @Provides
     @Singleton
-    fun provideFirestore() : FirebaseFirestore =
-        Firebase.firestore
+    fun provideFirestore(): FirebaseFirestore = Firebase.firestore
 
-    @Provides
-    @Singleton
-    fun provideFirebaseDataSource(
-        db: DatabaseReference
-    ) = FirebaseDataSource(db)
-
-//        @Provides
-//        @Singleton
-//        fun provideRepository(
-//            firebase: FirebaseDataSource
-//        ): WaterRepository = WaterRepositoryImpl(firebase)
-
-    @Provides
-    @Singleton
-    fun providePumpDataSource(
-        pumpDataSource : PumpDataSource
-    ) : WaterRepository = WaterRepositoryImpl(pumpDataSource)
-
-    @Provides
-    @Singleton
-    fun provideScheduleDataSource(
-        scheduleDataSource: ScheduleDataSource
-    ) : ScheduleRepository = ScheduleRepositoryImpl(scheduleDataSource)
-
-
+    // 3. Network Monitor
     @Provides
     @Singleton
     fun provideNetworkMonitor(
         @ApplicationContext context: Context
-    ): NetworkMonitor {
-        return NetworkMonitor(context)
-    }
+    ): NetworkMonitor = NetworkMonitor(context)
 
+    // 4. Repositories
+    // NOTE: Ensure your Impl classes (like LogsRepositoryImpl)
+    // have @Inject constructor(private val dataSource: LogsDataSource)
 
+    @Provides
+    @Singleton
+    fun provideWaterRepository(
+        pumpDataSource: PumpDataSource
+    ): WaterRepository = WaterRepositoryImpl(pumpDataSource)
+
+    @Provides
+    @Singleton
+    fun provideScheduleRepository(
+        scheduleDataSource: ScheduleDataSource
+    ): ScheduleRepository = ScheduleRepositoryImpl(scheduleDataSource)
+
+    @Provides
+    @Singleton
+    fun provideLogsRepository(
+        logsDataSource: LogsDataSource
+    ): LogsRepository = LogsRepositoryImpl(logsDataSource)
 }

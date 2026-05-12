@@ -39,4 +39,7 @@ object FirebasePaths {
 
     const val SCHEDULES = "schedules"
 
+    // ************** FIRESTORE PATHS *****************
+    const val PUMP_LOGS = "pump_logs"
+
 }

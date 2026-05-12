@@ -71,9 +71,9 @@ class FirebaseDataSource @Inject constructor(
      * Observes a Firestore collection.
      * Returns a QuerySnapshot which the Repository can then map to models.
      */
-    fun observeCollection(collectionPath: String, userId: String): Flow<com.google.firebase.firestore.QuerySnapshot> = callbackFlow {
+    fun observeCollection(collectionPath: String): Flow<com.google.firebase.firestore.QuerySnapshot> = callbackFlow {
         val query = firestore.collection(collectionPath)
-            .whereEqualTo("user_id", userId)
+//            .whereEqualTo("user_id", userId)
             // Note: You might need a Firestore Index for this if you use .orderBy()
             .orderBy("start_timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
 
