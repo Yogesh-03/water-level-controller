@@ -1,5 +1,12 @@
 package com.example.waterlevelcontroller.core.utils
 
+import kotlin.math.abs
+import kotlin.math.floor
+
+
+/**
+ * Largest Triangle Three Bucket Algorithm
+ */
 object Lttb {
     fun calculate(data: List<Pair<Double, Double>>, threshold: Int): List<Pair<Double, Double>> {
         val size = data.size
@@ -14,8 +21,8 @@ object Lttb {
         for (i in 0 until threshold - 2) {
             var avgX = 0.0
             var avgY = 0.0
-            val avgRangeStart = (Math.floor((i + 1) * bucketSize) + 1).toInt()
-            val avgRangeEnd = (Math.floor((i + 2) * bucketSize) + 1).toInt().coerceAtMost(size)
+            val avgRangeStart = (floor((i + 1) * bucketSize) + 1).toInt()
+            val avgRangeEnd = (floor((i + 2) * bucketSize) + 1).toInt().coerceAtMost(size)
             val avgRangeLength = avgRangeEnd - avgRangeStart
 
             for (j in avgRangeStart until avgRangeEnd) {
@@ -25,8 +32,8 @@ object Lttb {
             avgX /= avgRangeLength
             avgY /= avgRangeLength
 
-            val rangeOffs = (Math.floor(i * bucketSize) + 1).toInt()
-            val rangeTo = (Math.floor((i + 1) * bucketSize) + 1).toInt()
+            val rangeOffs = (floor(i * bucketSize) + 1).toInt()
+            val rangeTo = (floor((i + 1) * bucketSize) + 1).toInt()
 
             val pointAx = data[a].first
             val pointAy = data[a].second
@@ -34,7 +41,7 @@ object Lttb {
             var nextA = rangeOffs
 
             for (j in rangeOffs until rangeTo) {
-                val area = Math.abs(
+                val area = abs(
                     (pointAx - avgX) * (data[j].second - pointAy) -
                             (pointAx - data[j].first) * (avgY - pointAy)
                 ) * 0.5

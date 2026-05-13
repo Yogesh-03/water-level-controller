@@ -120,6 +120,13 @@ dependencies {
 
     // WorkManager (Kotlin + Coroutines)
     //implementation("androidx.work:work-runtime-ktx:2.6.0")
+
+    // Core Paging 3 Library
+    implementation("androidx.paging:paging-runtime-ktx:3.3.0")
+// Jetpack Compose Integration (Essential for collectAsLazyPagingItems)
+    implementation("androidx.paging:paging-compose:3.3.0")
+// Optional: If you are using Room for offline caching of logs
+    implementation("androidx.paging:paging-common-ktx:3.3.0")
 }
 
 

@@ -1,11 +1,17 @@
 package com.example.waterlevelcontroller.data.repository
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.data.mapper.toDomain
 import com.example.waterlevelcontroller.data.model.dto.PumpLogsDto
+import com.example.waterlevelcontroller.data.paging.PumpLogPagingSource
 import com.example.waterlevelcontroller.data.remote.LogsDataSource
 import com.example.waterlevelcontroller.domain.model.PumpLogs
 import com.example.waterlevelcontroller.domain.repository.LogsRepository
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
@@ -25,5 +31,16 @@ class LogsRepositoryImpl @Inject constructor(
                 // This catches exceptions occurring in the flow or the data source
                 emit(Resource.Error(e.message ?: "An unknown error occurred"))
             }
+    }
+
+    override fun getPumpLogsPaging(): Flow<PagingData<PumpLogs>> {
+        return Pager(
+            config = PagingConfig(
+                pageSize = 10,
+                prefetchDistance = 5,
+                enablePlaceholders = false
+            ),
+            pagingSourceFactory = { PumpLogPagingSource(Firebase.firestore) }
+        ).flow
     }
 }

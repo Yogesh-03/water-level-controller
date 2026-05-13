@@ -4,12 +4,15 @@ import android.util.Log
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.domain.model.PumpControl
 import com.example.waterlevelcontroller.domain.model.PumpLogs
 import com.example.waterlevelcontroller.domain.repository.LogsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +31,11 @@ class HistoryScreenViewModel @Inject constructor(
 
     private val _logsState = MutableStateFlow<Resource<List<PumpLogs>>>(Resource.Loading())
     val logsState: StateFlow<Resource<List<PumpLogs>>> = _logsState.asStateFlow()
+
+    // 1. Define the PagingData Flow
+    // We use cachedIn(viewModelScope) to keep the data alive during config changes
+    val pumpLogFlow: Flow<PagingData<PumpLogs>> = logsRepository.getPumpLogsPaging()
+        .cachedIn(viewModelScope)
 
     init {
         getPumpLogs()

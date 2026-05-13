@@ -16,9 +16,13 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.paging.LoadState
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import com.example.waterlevelcontroller.core.utils.Lttb
 import com.example.waterlevelcontroller.core.utils.Resource
 import com.example.waterlevelcontroller.domain.model.PumpLogs
@@ -69,6 +73,8 @@ fun HistoryScreen(
 
     val filters = listOf("Today", "This week", "This month", "All time")
     var selectedFilter by remember { mutableStateOf(3) }
+    // 1. Collect Paging Data
+    val lazyPagingItems = viewModel.pumpLogFlow.collectAsLazyPagingItems()
 
     // Transform Firestore Domain data into UI-friendly DayLog groups
     val dayLogs = remember(resourceState) {
@@ -100,7 +106,7 @@ fun HistoryScreen(
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
                     item {
-                        val fakeData = remember { generateFakeYearlyData() }
+                        val fakeData = remember { generateMassiveFakeData() }
 
                         Text(
                             "YEARLY TREND (LTTB DOWNSAMPLED)",
@@ -163,6 +169,66 @@ fun HistoryScreen(
                             Spacer(Modifier.height(6.dp))
                         }
                         item { Spacer(Modifier.height(12.dp)) }
+                    }
+
+                    // --- THE PAGED LIST ---
+                    items(
+                        count = lazyPagingItems.itemCount,
+                        key = lazyPagingItems.itemKey { it.id.ifEmpty { "temp_${UUID.randomUUID()}" } }
+                    ) { index ->
+                        val item = lazyPagingItems[index]
+                        if (item != null) {
+                            // Map Domain Model to UI Model for the LogCard
+                            val uiLog = remember(item) { mapToUiModel(item) }
+
+                            // Optional: Add a Date Header if day changes
+                            val showHeader = if (index == 0) true else {
+                                val currentDay = getDayString(item.start_timestamp)
+                                val prevDay = getDayString(lazyPagingItems[index - 1]?.start_timestamp ?: 0)
+                                currentDay != prevDay
+                            }
+
+                            if (showHeader) {
+                                Text(
+                                    text = getDayString(item.start_timestamp),
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            LogCard(uiLog)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+
+                    // --- LOADING & ERROR STATES ---
+                    item {
+                        when (val state = lazyPagingItems.loadState.append) {
+                            is LoadState.Loading -> {
+                                Box(
+                                    Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = ActiveBlue
+                                    )
+                                }
+                            }
+
+                            is LoadState.Error -> {
+                                Text(
+                                    "Error loading more logs",
+                                    color = Color.Red,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+
+                            else -> {}
+                        }
                     }
                 }
             }
@@ -411,16 +477,26 @@ fun ModePill(label: String, bg: Color, textColor: Color) {
     }
 }
 
-fun generateFakeYearlyData(): List<Pair<Double, Double>> {
+//fun generateFakeYearlyData(): List<Pair<Double, Double>> {
+//    val random = java.util.Random()
+//    return (1..365).map { day ->
+//        // Most days have 10-40 mins of runtime, some days have spikes up to 200 mins
+//        val baseRuntime = if (random.nextFloat() > 0.95) {
+//            random.nextInt(150) + 50 // Spike day
+//        } else {
+//            random.nextInt(30) + 10 // Normal day
+//        }
+//        Pair(day.toDouble(), baseRuntime.toDouble())
+//    }
+//}
+
+fun generateMassiveFakeData(): List<Pair<Double, Double>> {
     val random = java.util.Random()
-    return (1..365).map { day ->
-        // Most days have 10-40 mins of runtime, some days have spikes up to 200 mins
-        val baseRuntime = if (random.nextFloat() > 0.95) {
-            random.nextInt(150) + 50 // Spike day
-        } else {
-            random.nextInt(30) + 10 // Normal day
-        }
-        Pair(day.toDouble(), baseRuntime.toDouble())
+    return (1..15000).map { i ->
+        // Base noise + occasional massive spikes
+        val base = random.nextInt(20) + 5
+        val spike = if (random.nextFloat() > 0.98) random.nextInt(150) else 0
+        Pair(i.toDouble(), (base + spike).toDouble())
     }
 }
 
@@ -430,7 +506,7 @@ fun YearlyRuntimeChart(
     modifier: Modifier = Modifier
 ) {
     // 1. Downsample from 365 to 60 points using LTTB
-    val chartData = remember(rawData) { Lttb.calculate(rawData, 60) }
+    val chartData = remember(rawData) { Lttb.calculate(rawData, 25000) }
 
     val maxRuntime = chartData.maxOfOrNull { it.second }?.toFloat() ?: 100f
     val maxX = 365f
@@ -484,3 +560,67 @@ fun YearlyRuntimeChart(
         }
     }
 }
+
+private fun getDayString(timestamp: Long): String {
+    val sdf = SimpleDateFormat("EEEE, dd MMM", Locale.getDefault())
+    return sdf.format(Date(timestamp * 1000))
+}
+
+private fun mapToUiModel(item: PumpLogs): PumpLog {
+    val timeSdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val durationMin = (item.end_timestamp - item.start_timestamp) / 60
+
+    return PumpLog(
+        startTime = timeSdf.format(Date(item.start_timestamp * 1000)),
+        endTime = timeSdf.format(Date(item.end_timestamp * 1000)),
+        duration = "${durationMin}m",
+        liters = "~${item.consumption_liters.toInt()} L",
+        mode = when {
+            item.stop_reason.contains("AUTO", true) -> PumpMode.AUTO
+            item.stop_reason.contains("SCHEDULED", true) -> PumpMode.SCHEDULED
+            else -> PumpMode.MANUAL
+        }
+    )
+}
+
+//@Composable
+//fun YearlyRuntimeChartRaw(
+//    rawData: List<Pair<Double, Double>>,
+//    modifier: Modifier = Modifier
+//) {
+//    val maxRuntime = rawData.maxOfOrNull { it.second }?.toFloat() ?: 100f
+//    val maxX = 365f
+//
+//    Card(
+//        modifier = modifier.fillMaxWidth().height(200.dp),
+//        shape = RoundedCornerShape(14.dp),
+//        colors = CardDefaults.cardColors(containerColor = Color.White),
+//        border = BorderStroke(0.5.dp, Color(0xFFE5E5EA))
+//    ) {
+//        Column(modifier = Modifier.padding(16.dp)) {
+//            Text("ANNUAL MOTOR RUNTIME (RAW - 365 PTS)", fontSize = 10.sp, color = Color.Gray)
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Canvas(modifier = Modifier.fillMaxSize()) {
+//                val width = size.width
+//                val height = size.height
+//
+//                val path = androidx.compose.ui.graphics.Path()
+//
+//                rawData.forEachIndexed { index, point ->
+//                    val x = (point.first.toFloat() / maxX) * width
+//                    val y = height - (point.second.toFloat() / maxRuntime) * height
+//
+//                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+//                }
+//
+//                drawPath(
+//                    path = path,
+//                    color = Color(0xFF8E8E93), // Using a neutral gray for the raw comparison
+//                    style = Stroke(width = 1.dp.toPx(), cap = StrokeCap.Round)
+//                )
+//            }
+//        }
+//    }
+//}
