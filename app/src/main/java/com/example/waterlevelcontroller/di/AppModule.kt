@@ -1,7 +1,9 @@
 package com.example.waterlevelcontroller.di
 
 import android.content.Context
+import androidx.room.Room
 import com.example.waterlevelcontroller.core.network.NetworkMonitor
+import com.example.waterlevelcontroller.data.local.AppDatabase
 import com.example.waterlevelcontroller.data.remote.FirebaseDataSource
 import com.example.waterlevelcontroller.data.remote.LogsDataSource
 import com.example.waterlevelcontroller.data.remote.PumpDataSource
@@ -28,27 +30,42 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object AppModule {
 
-    // 1. Correct Realtime Database Provider
+    // Rename this to differentiate from Room Database
     @Provides
     @Singleton
-    fun provideDatabase(): DatabaseReference =
+    fun provideRealtimeDatabaseReference(): DatabaseReference =
         FirebaseDatabase.getInstance().reference
 
-    // 2. Correct Firestore Provider (Removed the parameter to stop recursion)
     @Provides
     @Singleton
     fun provideFirestore(): FirebaseFirestore = Firebase.firestore
 
-    // 3. Network Monitor
     @Provides
     @Singleton
     fun provideNetworkMonitor(
         @ApplicationContext context: Context
     ): NetworkMonitor = NetworkMonitor(context)
 
-    // 4. Repositories
-    // NOTE: Ensure your Impl classes (like LogsRepositoryImpl)
-    // have @Inject constructor(private val dataSource: LogsDataSource)
+    // ROOM DATABASE PROVIDER
+    @Provides
+    @Singleton
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return Room.databaseBuilder(
+            context,
+            AppDatabase::class.java,
+            "water_level_db"
+        ).build()
+    }
+
+    // UPDATED LOGS REPOSITORY PROVIDER
+    // You must pass the database and firestore here because LogsRepositoryImpl needs them
+    @Provides
+    @Singleton
+    fun provideLogsRepository(
+        logsDataSource: LogsDataSource,
+        database: AppDatabase,
+        firestore: FirebaseFirestore
+    ): LogsRepository = LogsRepositoryImpl(logsDataSource, database, firestore)
 
     @Provides
     @Singleton
@@ -61,10 +78,4 @@ object AppModule {
     fun provideScheduleRepository(
         scheduleDataSource: ScheduleDataSource
     ): ScheduleRepository = ScheduleRepositoryImpl(scheduleDataSource)
-
-    @Provides
-    @Singleton
-    fun provideLogsRepository(
-        logsDataSource: LogsDataSource
-    ): LogsRepository = LogsRepositoryImpl(logsDataSource)
 }

@@ -9,4 +9,6 @@ interface LogsRepository {
     suspend fun getPumpLogs() : Flow<Resource<List<PumpLogs>>>
 
     fun getPumpLogsPaging(): Flow<PagingData<PumpLogs>>
+
+    fun getPumpLogsMediator(): Flow<PagingData<PumpLogs>>
 }

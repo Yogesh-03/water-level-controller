@@ -34,7 +34,7 @@ class HistoryScreenViewModel @Inject constructor(
 
     // 1. Define the PagingData Flow
     // We use cachedIn(viewModelScope) to keep the data alive during config changes
-    val pumpLogFlow: Flow<PagingData<PumpLogs>> = logsRepository.getPumpLogsPaging()
+    val pumpLogFlow: Flow<PagingData<PumpLogs>> = logsRepository.getPumpLogsMediator()
         .cachedIn(viewModelScope)
 
     init {

@@ -60,6 +60,9 @@ android {
 }
 
 dependencies {
+
+    val room_version = "2.7.0-alpha01"
+
     implementation(libs.androidx.compose.remote.creation.core)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -72,7 +75,12 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
     implementation("com.google.firebase:firebase-database-ktx")
     implementation("com.google.firebase:firebase-auth-ktx")
-    implementation(libs.androidx.room.runtime.android)
+
+    implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
+
+    // If you are using Kapt:
+    kapt("androidx.room:room-compiler:$room_version")
     //implementation(libs.firebase.firestore.ktx)
     implementation("com.google.firebase:firebase-firestore-ktx")
     //implementation(libs.androidx.work.runtime.ktx)
@@ -127,6 +135,8 @@ dependencies {
     implementation("androidx.paging:paging-compose:3.3.0")
 // Optional: If you are using Room for offline caching of logs
     implementation("androidx.paging:paging-common-ktx:3.3.0")
+
+    implementation("androidx.room:room-paging:${room_version}")
 }
 
 
